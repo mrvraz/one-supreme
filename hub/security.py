@@ -121,6 +121,13 @@ def security_headers(get_response):
         response = get_response(request)
         response.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+        user = getattr(request, "user", None)  # not there for static files, which whitenoise answers first
+        if user is not None and user.is_authenticated and not response.has_header("Cache-Control"):
+            # On a shared warehouse device, Back after signing out must not show the last person's pages.
+            response["Cache-Control"] = "private, no-store"
+        if response.get("Content-Type", "").startswith("application/json"):
+            # Opened directly, the page scripts' JSON downloads instead of showing (no "reflected file download").
+            response.setdefault("Content-Disposition", 'attachment; filename="answer.json"')
         return response
 
     return middleware
@@ -156,5 +163,21 @@ def house_rules(get_response):
         ):
             return redirect(f"{reverse('house_rules')}?next={quote(request.get_full_path())}")
         return get_response(request)
+
+    return middleware
+
+
+def log_refusals(get_response):
+    """Every refused request (403: no permission, or no valid form token) goes to the security log, with who and where.
+
+    Last in settings.MIDDLEWARE, so it sees what the views and the form-token check refuse, but not what middleware
+    higher up refuses and logs itself.
+    """
+
+    def middleware(request):
+        response = get_response(request)
+        if response.status_code == 403:
+            audit("access_denied", request, level=logging.WARNING, method=request.method)
+        return response
 
     return middleware

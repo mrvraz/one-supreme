@@ -82,6 +82,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "hub.security.house_rules",
     "hub.security.presence",
+    "hub.security.log_refusals",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -153,16 +154,23 @@ if OIDC_ENABLED:
     MIDDLEWARE.append("mozilla_django_oidc.middleware.SessionRefresh")
     OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = 15 * 60
     OIDC_EXEMPT_URLS = [re.compile(r"^/media/"), "manifest", "icon"]
+    # Signing out also signs the browser out of Entra ID, so on a shared device the next person can't sign straight
+    # back in as the last one.
+    OIDC_OP_LOGOUT_URL_METHOD = "hub.auth.provider_logout_url"
 if ALLOW_PASSWORD_LOGIN or not OIDC_ENABLED:
     AUTHENTICATION_BACKENDS.append("django.contrib.auth.backends.ModelBackend")
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "feed"
 LOGOUT_REDIRECT_URL = "login"
+# __Host-: browsers only take this cookie over HTTPS, for this exact address, so no other site under the company's
+# domain can plant or overwrite it. Local development runs on plain http, which can't hold such a cookie.
+SESSION_COOKIE_NAME = "sessionid" if DEBUG else "__Host-sessionid"
 
+# Passwords are only for the break-glass admin (and demos). 12 characters is the OWASP ASVS minimum.
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
 ]
 

@@ -260,6 +260,8 @@ def service_worker(request):
 
 @require_POST
 def push_subscribe(request):
+    if request.content_type != "application/json":  # app.js always sends JSON; anything else isn't from the hub
+        return HttpResponse("Send the subscription as JSON.", status=415)
     try:
         data = json.loads(request.body)
         endpoint, p256dh, auth = data["endpoint"], data["keys"]["p256dh"], data["keys"]["auth"]
@@ -282,6 +284,8 @@ def push_subscribe(request):
 
 @require_POST
 def push_unsubscribe(request):
+    if request.content_type != "application/json":
+        return HttpResponse("Send the subscription as JSON.", status=415)
     try:
         endpoint = json.loads(request.body)["endpoint"]
     except (ValueError, KeyError, TypeError):

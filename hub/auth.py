@@ -2,6 +2,8 @@ import logging
 
 from django.conf import settings
 from django.core.exceptions import SuspiciousOperation
+from django.urls import reverse
+from django.utils.http import urlencode
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 from .security import audit
@@ -59,3 +61,17 @@ class EmployeeOIDCBackend(OIDCAuthenticationBackend):
         # Accounts switched off in the admin are signed out on their next request.
         user = super().get_user(user_id)
         return user if user and user.is_active else None
+
+
+def provider_logout_url(request):
+    """Where Sign out sends the browser (settings.OIDC_OP_LOGOUT_URL_METHOD): Microsoft's sign-out page, then back here.
+
+    Signing out of the hub alone would leave the browser signed in to Microsoft, and on a shared device the next person
+    would press "Sign in" and be let in as the last one. Google Workspace has no such page, so it goes to sign-in.
+    """
+    back = settings.SITE_URL + reverse("login")
+    authorize = settings.OIDC_OP_AUTHORIZATION_ENDPOINT
+    if not authorize.startswith("https://login.microsoftonline.com/") or not authorize.endswith("/authorize"):
+        return reverse("login")
+    # Microsoft only sends the browser back if this address is one of the app registration's redirect URIs.
+    return authorize.removesuffix("/authorize") + "/logout?" + urlencode({"post_logout_redirect_uri": back})
