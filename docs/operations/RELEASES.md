@@ -16,31 +16,50 @@ Each release is a git tag `vMAJOR.MINOR.PATCH`, such as `v2.1.0`. Its image is
 |---|---|
 | Patch, `2.0.1` | Fixes, security fixes, library and base image updates. No database changes, no new settings. |
 | Minor, `2.1.0` | New features and new optional settings. Database changes that add: tables, columns, indexes, links to existing tables. |
-| Major, `3.0.0` | Anything IT must act on: a required new setting, database changes that remove or rewrite, a new Postgres version. |
+| Major, `3.0.0` | Anything IT must act on: a required new setting, database changes that remove or rewrite, a new Postgres version (which always needs the backup to roll back). |
 
 How a release is rolled back depends on the **Database changes:** line of its changelog entry, not on its number:
 
-- **none** or **adds only**: run the previous image.
+- **none** or **adds only**: run the previous image. "Adds only" means the previous version, which ignores the
+  additions, still shows and protects correctly every row the new version wrote.
 - **needs the backup to roll back**: run the previous image and restore the backup taken before installing. This
-  covers every removal or rewrite, and also additions that the previous version would trip over: a new link from
-  any table to an existing one, such as people or posts, and a new rule on an existing table
-  ([Expand, then contract](#expand-then-contract)). A minor release can have them.
+  covers every removal or rewrite, and also additions that the previous version would trip over or would show
+  wrongly ([Expand, then contract](#expand-then-contract)). A minor release can have them:
+  - a new link from any table to an existing one, such as people or posts, and a new rule on an existing table;
+  - a new column or table that hides something or limits who sees it: a private flag, an audience, a draft, a soft
+    delete, a moderation hide, a privacy setting, a block. The previous version ignores it and shows everyone what
+    it hid;
+  - a release that moves data to a new column or table and stops writing the old one. The previous version reads
+    the old one, which no longer has the latest edits.
+
+A release that changes the Postgres version always needs the backup to roll back, whatever its **Database changes:**
+line says, and its entry says how: the previous Postgres can't open the new version's data.
 
 The version is in two places, and the release refuses a tag that doesn't match both: `APP_VERSION` in
 `config/settings.py` (staff see it on the About page) and a `## [2.1.0]` entry in `CHANGELOG.md`.
 
 **How often:** small releases, often. A patch whenever fixes are merged (a security fix within 48 hours if the hole
-is being exploited, as in RUNBOOK.md), a minor release about once a month.
+is being exploited, as in RUNBOOK.md), a minor release about once a month. And at least one release every month,
+before IT's patching on the second Wednesday: if nothing else has merged, a patch with only the version and the
+changelog entry "Base image and Debian updates". The server never builds the hub, and each release is built from
+scratch on GitHub, so only a release brings the newest base image and Debian packages (OpenSSL, ffmpeg) into the
+hub. For the same reason, an urgent fix in a Debian package or in Python means a patch release the same day.
 
 ## Set up once
 
 ### On GitHub (organisation owner, after GITHUB-SETUP.md)
 
-1. **Protect the version tags.** **Settings**, **Rules**, **Rulesets**, **New ruleset**, **New tag ruleset**.
-   Name: `Version tags`. **Enforcement status**: **Active**. **Bypass list**: **Add bypass**, **Repository admin**.
-   **Target tags**: **Add target**, **Include by pattern**, `v*`. Tick **Restrict creations**, **Restrict updates**
-   and **Restrict deletions**, then **Create**. Only admins can now create a version tag, and nobody can move one by
-   accident. If a tag ruleset with these settings already exists (such as `Protect releases`), skip this step.
+1. **Protect the version tags and names.** **Settings**, **Rules**, **Rulesets**, **New ruleset**, **New tag
+   ruleset**. Name: `Version tags`. **Enforcement status**: **Active**. **Bypass list**: **Add bypass**,
+   **Repository admin**. **Target tags**: **Add target**, **Include by pattern**, `v*`. Tick **Restrict creations**,
+   **Restrict updates** and **Restrict deletions**, then **Create**. Only admins can now create a version tag, and
+   nobody can move one by accident. If a tag ruleset with these settings already exists (such as
+   `Protect releases`), skip this tag ruleset.
+   Then, so nobody can push a branch with a version's name, whose run would look like the release's: **New
+   ruleset**, **New branch ruleset**. Name: `Version names`. **Enforcement status**: **Active**. **Bypass list**:
+   **Add bypass**, **Repository admin**, nothing else. **Target branches**: **Add target**, **Include by pattern**,
+   `v*`. Tick only **Restrict creations**, then **Create**. Branch names that start with `v` are now for admins
+   only, so start other branches' names with another letter (`fix-video`, not `video-fix`).
 2. **Require the Postgres tests.** Once `.github/workflows/postgres.yml` has run once, add `Tests on Postgres 17` to
    the required checks of the `Protect main` ruleset (GITHUB-SETUP.md, step 6).
 3. **After the first release**, open the organisation's **Packages** tab, then `one-supreme`. Check that it is
@@ -148,10 +167,19 @@ for the change.
    the repository can push an image under any version number, so only the line from that run is trusted. Sign in
    to GitHub with your own account or the server's account. In the repository: **Actions**, then **Release** in the
    left menu, then the run marked `v2.1.0`. Check that it was started by a push of `v2.1.0`, that it has a green
-   tick, and that **Workflow file** in its left menu shows `.github/workflows/release.yml`. On its **Summary**,
-   under "Published", is the line. Put it in `.env` in place of the old `HUB_IMAGE=` line. It starts with
-   `ghcr.io/<organisation>/one-supreme:2.1.0@sha256:`, and the digest after `@sha256:` pins the server to exactly
-   the image that run built and checked.
+   tick, and that **Workflow file** in its left menu shows `.github/workflows/release.yml`.
+   Then check that it ran the tagged commit. On the server, this prints the tag's commit id, 40 characters:
+   ```bash
+   git rev-parse "refs/tags/v2.1.0^{commit}"
+   ```
+   On the run's page, click the short commit id next to "Triggered via push". The commit's page opens, and its
+   address ends with the run's full commit id. Compare all 40 characters: the 7-character short id is not enough,
+   because a made-up commit can be given the same short id in minutes. If they differ, or if more than one Release
+   run is marked `v2.1.0`, stop and tell the maintainers: someone ran a workflow of their own under the version's
+   name. A run of the tagged commit can only come from `main`'s reviewed `release.yml`.
+   On the run's **Summary**, under "Published", is the line. Put it in `.env` in place of the old `HUB_IMAGE=`
+   line. It starts with `ghcr.io/<organisation>/one-supreme:2.1.0@sha256:`, and the digest after `@sha256:` pins
+   the server to exactly the image that run built and checked.
 6. **Download it and see which database changes it will make.** Nothing changes yet:
    ```bash
    docker compose pull app scheduler
@@ -175,7 +203,10 @@ If the new release misbehaves, decide within the hour. The **Database changes:**
 entry says which way back.
 
 **Database changes: none or adds only.** Takes a few minutes, and nothing is lost. The previous version doesn't use
-the added tables and columns, so they can stay.
+the added tables and columns, so they can stay. This never covers additions that hide something or limit who sees
+it, or data moved to a new place: the previous version would show everyone what they hid, or miss the latest
+edits, so those releases say "needs the backup to roll back" ([Version numbers](#version-numbers)). Nor a release
+that changes the Postgres version, whatever its line says: it always needs the backup, and its entry says how.
 
 ```bash
 git checkout v2.0.0          # the version noted in step 3
@@ -212,8 +243,8 @@ database, so they can't show what a change does to a hub full of posts. These ru
 
 ### Expand, then contract
 
-A release should only add to the database. Then the previous version still runs on it, and a rollback needs no
-restore.
+A release should only add to the database. Then the previous version still runs on it, and, unless the additions
+hide something (below), a rollback needs no restore.
 
 - **Adding** a table, a column or an index is fine. A new column needs `null=True` or a database default
   (`db_default=`). A plain `default=` isn't enough: Django fills the existing rows with it, then removes it from the
@@ -225,11 +256,19 @@ restore.
   the end of the transaction, so the nightly clean-up, leavers and erasure in the admin fail until the restore. Its
   writes that break a new rule fail too. Mark such a release "needs the backup to roll back". A link from an
   existing table to a new one is fine: the previous version never deletes from the new table.
+- **Anything that hides something or limits who sees it** only adds, but it needs the backup to roll back: a new
+  column or table for a private flag, an audience, a draft, a soft delete, a moderation hide, a privacy setting or
+  a block. The previous version ignores it, so after a rollback it would show what the new version hid to all
+  staff, in the feed, search, digests and push. Mark such a release "needs the backup to roll back".
 - **Removing** a column or table comes at least one release after the code stopped using it. That release must have
   run for two weeks, so nobody needs to roll back past it. The release that removes it is a major release, marked
   "needs the backup to roll back".
-- **Renaming** is adding the new one, copying the data across, switching the code, and removing the old one in a
-  later release. Never `RenameField` or `RenameModel` on a table that holds data.
+- **Renaming**, and any change that moves data to a new column or table, is adding the new place, copying the data
+  across, switching the code to read the new place, and removing the old one in a later release. Until that
+  release, the code keeps writing both the old and the new place, so the previous version still finds every edit.
+  A release that stops writing the old place sooner needs the backup to roll back: the previous version would read
+  the old place, so edits would be lost and posts written since would show an empty body. Never `RenameField` or
+  `RenameModel` on a table that holds data.
 - **Changing data** (`RunPython`) goes in a migration of its own, never in the same one as a change to the tables,
   and gets a reverse step (`RunPython.noop` if nothing needs undoing). On Postgres both share one transaction, so
   table locks last as long as the data change, and Django warns it can fail with "pending trigger events".
@@ -288,9 +327,9 @@ roll back to. On a hub full of data they would not be, so here is what to avoid 
 | Migration | What it does on Postgres | What it would mean on a hub with data |
 |---|---|---|
 | `chat`, `hub`, `jobs`, `journeys`, `library` 0001 | Creates the tables, indexes and foreign keys. | Nothing: new tables. |
-| `hub` 0002 | Adds deleted-at and deleted-by columns to posts and comments, and `policy_version` to people. | `policy_version` is added `NOT NULL DEFAULT ''`, then the default is dropped, so the previous version couldn't create accounts. The two new foreign keys point at people, so it couldn't delete anyone who had deleted a post or comment either: a rollback would need the backup. Both are checked at once, reading every post and comment. |
+| `hub` 0002 | Adds deleted-at and deleted-by columns to posts and comments, and `policy_version` to people. | `policy_version` is added `NOT NULL DEFAULT ''`, then the default is dropped, so the previous version couldn't create accounts. The two new foreign keys point at people, so it couldn't delete anyone who had deleted a post or comment either: a rollback would need the backup. Both are checked at once, reading every post and comment. `deleted_at` hides deleted posts and comments, which the previous version would show again: another reason it would need the backup. |
 | `hub` 0003 | Adds `deactivated_at` and a unique `sso_id` to people, an index on attachment files, and dates existing leavers. | The indexes block writes to people and attachments while they build (with a second `_like` index each). The data step shares a transaction with the table changes. The unique rule is on a new column the previous version never writes, so it doesn't stop a rollback. |
-| `hub` 0004 | 13 new tables; 43 new columns on posts, people, groups, alerts, comments, reports and RSVPs; 9 indexes on those tables; the report CHECK constraint dropped and added again; then a data step that updates every post. | The riskiest. One transaction locks 7 of the busiest tables until the data step has rewritten every post, so the hub would stop for as long as that takes. 25 of the new columns are NOT NULL with the default dropped. Adding the CHECK again reads every report. Its new links point at people and posts, so a rollback past it would need the backup. Next time: one migration that adds, one that changes data, one for the indexes. |
+| `hub` 0004 | 13 new tables; 43 new columns on posts, people, groups, alerts, comments, reports and RSVPs; 9 indexes on those tables; the report CHECK constraint dropped and added again; then a data step that updates every post. | The riskiest. One transaction locks 7 of the busiest tables until the data step has rewritten every post, so the hub would stop for as long as that takes. 25 of the new columns are NOT NULL with the default dropped. Adding the CHECK again reads every report. Its new links point at people and posts, so a rollback past it would need the backup. So would its columns that hide things or limit who sees them: `Community.is_private`, `Post.is_draft`, `Post.audiences` and `User.share_email`. The previous version would show private groups' posts, drafts, news meant for some groups and hidden email addresses to all staff. Next time: one migration that adds, one that changes data, one for the indexes. |
 | `hub` 0005 | Changes the permission list only. | Nothing: no SQL. |
 | `hub` 0006 | Drops `last_digest_at` from people. | A removal in the same release that added the column (0004). Fine before go-live; after it, the removal must wait a release. |
 | `library` 0002 | Drops `content_type` from documents. | As 0006. |

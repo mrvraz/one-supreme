@@ -1,5 +1,6 @@
 # The server runs Postgres 17, but ci.yml runs the tests on SQLite. This runs every test again on Postgres 17, so
-# whatever only Postgres refuses (text longer than its column, a database change that won't apply) fails here first.
+# what only Postgres refuses (text longer than its column, a database change that won't apply) fails here first,
+# wherever a test reaches it.
 # release.yml runs it too, before it publishes an image.
 name: Postgres
 

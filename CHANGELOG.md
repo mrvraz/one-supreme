@@ -8,10 +8,14 @@ Each entry says whether it changes the database and whether it needs new setting
 rolled back:
 
 - **Database changes: none** or **adds only** (new tables, columns and indexes that the previous version can
-  ignore): roll back by running the previous image.
+  ignore, and still shows and protects correctly every row the new version wrote): roll back by running the
+  previous image.
 - **Database changes: needs the backup to roll back**: rolling back also means restoring the backup taken before
-  installing. Every removal or rewrite, and every addition the previous version would trip over: a new link to an
-  existing table, such as people or posts, or a new rule on one. The entry says which.
+  installing. Every removal or rewrite, and every addition the previous version would trip over or show wrongly: a
+  new link to an existing table, such as people or posts, or a new rule on one; a new column or table that hides
+  something or limits who sees it (private flags, audiences, drafts, soft deletes, moderation hides, privacy
+  settings, blocks); data moved to a new place while the old one is no longer written. A release that changes the
+  Postgres version always needs it. The entry says which.
 
 ## [2.0.0] - 2026-12-01
 

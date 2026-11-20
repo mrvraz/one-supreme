@@ -1,7 +1,9 @@
 # Publishes a release when a version tag such as v2.0.1 is pushed; docs/operations/RELEASES.md says how to cut one.
 # Every test runs on Postgres 17, then the image the server runs is built, checked against an empty Postgres 17 and
 # published to GitHub's container registry with a record of how it was built. If any step fails, nothing is published.
-# Every action is pinned to a commit and the BuildKit image to a digest, so a moved tag can't change what runs.
+# Every action is pinned to a commit and the BuildKit image to a digest, so a moved tag can't change the tools that
+# build and publish the image. The Postgres 17 test database is named by tag (it builds no part of the image), and
+# the base image is whatever the Dockerfile's FROM line names; each release's build record shows which one it used.
 # Dependabot keeps the action pins current.
 name: Release
 
