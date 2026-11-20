@@ -170,9 +170,9 @@ docker run --rm -v staff-hub_media:/data -v "$PWD":/backup alpine tar czf /backu
 ## Security notes
 
 - Every page requires sign-in (Django's `LoginRequiredMiddleware`); only the sign-in page, the SSO callback, the home-screen icon/manifest and the push service worker are public.
-- Who can reach what is one table, `docs/security/ACCESS-MATRIX.md`: every page for every kind of person (signed out, new starter, colleague, group member, author, each role, superuser), for links and for buttons. `hub/tests_access_matrix.py` checks the hub against it on every test run, and a new page fails the tests until it has a row.
 - A Content Security Policy only allows scripts from the hub itself and forbids framing; the browser also gets no access to camera, microphone or location.
 - Uploaded files are served by nginx only after the app has checked the session and that the person may see them (`X-Accel-Redirect`); the files folder is not public.
+- Who can reach what is one table, `docs/security/ACCESS-MATRIX.md`: every page for every kind of person (signed out, new starter, colleague, group member, author, each role, superuser), for links and for buttons. `hub/tests_access_matrix.py` checks the hub against it on every test run, and a new page fails the tests until it has a row.
 - Uploads are checked by their content, not the file name. Photos are re-encoded and videos are re-packaged without metadata; anything ffmpeg or the image library can't read is rejected.
 - Typed text is escaped before any formatting is added; links must start with `http://` or `https://`.
 - Push subscriptions are only accepted for the known push services, so the server can't be made to send requests elsewhere. Push messages are encrypted end to end; people can hide the text from their lock screen.
