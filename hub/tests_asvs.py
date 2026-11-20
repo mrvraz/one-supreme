@@ -10,14 +10,19 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from unittest import mock
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.test import Client, TestCase, override_settings
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
-from .models import PushSubscription
+from chat.models import Conversation, Membership, Message
+
+from .auth import EmployeeOIDCBackend
+from .models import Post, PushSubscription, User
 from .tests import make_user
 
 TEMP_MEDIA = tempfile.mkdtemp()
@@ -52,6 +57,40 @@ class BaselineTests(TestCase):
         worker = self.client.get(reverse("service_worker"))
         self.assertEqual(worker["Cache-Control"], "no-cache")
         worker.close()
+
+    def chat_picture(self, member, name):
+        """A chat with a picture in it, that only `member` is in."""
+        chat = Conversation.objects.create(created_by=member)
+        Membership.objects.create(conversation=chat, user=member)
+        Message.objects.create(conversation=chat, sender=member, image=name)
+        os.makedirs(os.path.join(TEMP_MEDIA, "chat"), exist_ok=True)
+        with open(os.path.join(TEMP_MEDIA, name), "wb") as fh:
+            fh.write(b"\xff\xd8\xff")
+        return chat
+
+    def test_8_2_3_private_files_are_never_kept_by_the_browser(self):
+        # Opened from a chat, a picture becomes a history entry: the next person at a shared device must find nothing.
+        self.chat_picture(self.alice, "chat/mine.jpg")
+        picture = self.client.get("/media/chat/mine.jpg")
+        self.assertEqual(picture.status_code, 200)
+        self.assertEqual(picture["Cache-Control"], "private, no-store")
+        picture.close()
+
+    def test_7_2_2_what_someone_may_not_see_is_logged_as_refused(self):
+        # The hub answers "not found" for these, so the person can't tell they exist. The log still sees them.
+        chat = self.chat_picture(self.bob, "chat/bobs.jpg")
+        draft = Post.objects.create(author=self.bob, body="Not ready", is_draft=True)
+        with self.assertLogs("hub.security", "WARNING") as logs:
+            for address in (reverse("chat:thread", args=[chat.pk]), "/media/chat/bobs.jpg", reverse("post_detail", args=[draft.pk])):
+                self.assertEqual(self.client.get(address).status_code, 404)
+        found = [(r.getMessage(), r.details["user"], r.details["path"], r.details["status"]) for r in logs.records]
+        self.assertEqual(found, [
+            ("access_denied", "alice@example.com", f"/chat/{chat.pk}/", 404),
+            ("access_denied", "alice@example.com", "/media/chat/bobs.jpg", 404),
+            ("access_denied", "alice@example.com", f"/posts/{draft.pk}/", 404),
+        ])
+        with self.assertNoLogs("hub.security", "WARNING"):  # bots trying addresses before signing in are left out
+            Client().get("/wp-login.php")
 
     def test_7_2_2_refused_requests_are_logged_with_who_and_where(self):
         self.assertEqual(settings.MIDDLEWARE[-1], "hub.security.log_refusals")  # sees views and the form-token check
@@ -98,7 +137,32 @@ class BaselineTests(TestCase):
         with self.settings(OIDC_OP_AUTHORIZATION_ENDPOINT="https://accounts.google.com/o/oauth2/v2/auth"):
             self.assertRedirects(self.client.post(reverse("logout")), reverse("login"), fetch_redirect_response=False)
 
+    @override_settings(
+        OIDC_OP_LOGOUT_URL_METHOD="hub.auth.provider_logout_url",
+        OIDC_OP_AUTHORIZATION_ENDPOINT=f"{ENTRA}/authorize",
+        SITE_URL="https://hub.example.com",
+        ALLOWED_EMAIL_DOMAINS=["example.com"],
+    )
+    def test_3_3_1_the_browser_may_follow_sign_out_to_microsoft_which_signs_out_that_account(self):
+        # Sign-in keeps Entra's login_hint claim from the ID token in the session.
+        backend = EmployeeOIDCBackend.__new__(EmployeeOIDCBackend)  # skip __init__, which needs live SSO settings
+        backend.UserModel = User
+        backend.request = RequestFactory().get("/oidc/callback/")
+        backend.request.session = self.client.session
+        claims = {"email": "alice@example.com", "sso_id": "oid-1"}
+        with mock.patch.object(EmployeeOIDCBackend, "get_userinfo", return_value=claims):
+            self.assertEqual(backend.get_or_create_user("access", "id", {"login_hint": "hint-1"}), self.alice)
+        backend.request.session.save()
+        # Sign out is a form on the menu. Chrome and Edge only follow its redirect to a place form-action lists.
+        policy = self.client.get(reverse("menu"))["Content-Security-Policy"]
+        form_action = next(rule for rule in policy.split("; ") if rule.startswith("form-action ")).split()[1:]
+        sign_out = urlsplit(self.client.post(reverse("logout"))["Location"])
+        self.assertIn(f"{sign_out.scheme}://{sign_out.netloc}", form_action)
+        self.assertIn("logout_hint=hint-1", sign_out.query)  # so Microsoft signs out that account without asking which
+
     def test_without_single_sign_on_sign_out_goes_to_the_sign_in_page(self):
+        policy = self.client.get(reverse("menu"))["Content-Security-Policy"]
+        self.assertIn("form-action 'self';", policy)  # forms go nowhere else
         self.assertRedirects(self.client.post(reverse("logout")), reverse("login"), fetch_redirect_response=False)
         self.assertEqual(self.client.get(reverse("feed")).status_code, 302)
 

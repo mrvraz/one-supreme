@@ -134,6 +134,8 @@ def _guard_comment_image(user, name):
 plugins.MEDIA_GUARDS.update(
     {"avatars": lambda user, name: True, "covers": _guard_cover, "posts": _guard_post_file, "comments": _guard_comment_image}
 )
+# Every colleague sees these, so browsers may keep them for a day. Any other file may be private to some people.
+SHARED_MEDIA = ("avatars/", "covers/people/", "covers/groups/")
 
 
 def media(request, path):
@@ -165,7 +167,8 @@ def media(request, path):
     if not shown_inline or isinstance(allowed, str):
         filename = allowed if isinstance(allowed, str) else os.path.basename(name)
         response["Content-Disposition"] = content_disposition_header(as_attachment=not shown_inline, filename=filename)
-    response["Cache-Control"] = "private, max-age=86400"
+    # Private files are never kept: on a shared device the next person could open them from the history.
+    response["Cache-Control"] = "private, max-age=86400" if name.startswith(SHARED_MEDIA) else "private, no-store"
     return response
 
 

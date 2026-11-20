@@ -114,12 +114,25 @@ CONTENT_SECURITY_POLICY = "; ".join(
 )
 
 
+def content_security_policy():
+    """CONTENT_SECURITY_POLICY, plus Microsoft's sign-out page as a form target when single sign-on is Entra ID.
+
+    Sign out is a form answered with a redirect there (hub.auth.provider_logout_url), and Chrome and Edge refuse a
+    form's redirect to anywhere form-action doesn't list.
+    """
+    from .auth import ENTRA, entra_endpoint  # here: hub.auth imports this module
+
+    if not entra_endpoint():
+        return CONTENT_SECURITY_POLICY
+    return CONTENT_SECURITY_POLICY.replace("form-action 'self'", f"form-action 'self' {ENTRA}")
+
+
 def security_headers(get_response):
     """Tell browsers to refuse scripts, frames and device access that we didn't put there."""
 
     def middleware(request):
         response = get_response(request)
-        response.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
+        response.setdefault("Content-Security-Policy", content_security_policy())
         response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
         user = getattr(request, "user", None)  # not there for static files, which whitenoise answers first
         if user is not None and user.is_authenticated and not response.has_header("Cache-Control"):
@@ -168,7 +181,11 @@ def house_rules(get_response):
 
 
 def log_refusals(get_response):
-    """Every refused request (403: no permission, or no valid form token) goes to the security log, with who and where.
+    """Every refused request goes to the security log, with who and where.
+
+    403 is no permission, or no valid form token. 404 for a signed-in person is logged too: the hub answers "not found"
+    for a post, chat, file or group someone may not see, so they can't tell it exists. The log can't tell those from
+    a mistyped link either, so a burst from one person is what to watch for.
 
     Last in settings.MIDDLEWARE, so it sees what the views and the form-token check refuse, but not what middleware
     higher up refuses and logs itself, nor the single sign-on refresh's 403 to page scripts.
@@ -176,8 +193,9 @@ def log_refusals(get_response):
 
     def middleware(request):
         response = get_response(request)
-        if response.status_code == 403:
-            audit("access_denied", request, level=logging.WARNING, method=request.method)
+        status = response.status_code
+        if status == 403 or (status == 404 and request.user.is_authenticated):
+            audit("access_denied", request, level=logging.WARNING, method=request.method, status=status)
         return response
 
     return middleware

@@ -19,6 +19,14 @@ class EmployeeOIDCBackend(OIDCAuthenticationBackend):
         claims["sso_id"] = payload.get("oid") or claims.get("sub")
         return claims
 
+    def get_or_create_user(self, access_token, id_token, payload):
+        user = super().get_or_create_user(access_token, id_token, payload)
+        # Entra's login_hint optional claim (ENTRA-SETUP.md) lets Sign out end this account's Microsoft session
+        # without asking which account to sign out (provider_logout_url).
+        if user and payload.get("login_hint"):
+            self.request.session[LOGIN_HINT] = payload["login_hint"]
+        return user
+
     def verify_claims(self, claims):
         email = (claims.get("email") or "").lower()
         if "@" in email and email.rsplit("@", 1)[1] in settings.ALLOWED_EMAIL_DOMAINS:
@@ -63,15 +71,31 @@ class EmployeeOIDCBackend(OIDCAuthenticationBackend):
         return user if user and user.is_active else None
 
 
+ENTRA = "https://login.microsoftonline.com"
+LOGIN_HINT = "oidc_login_hint"  # in the session: Entra's login_hint claim, sent back at sign-out
+
+
+def entra_endpoint():
+    """This tenant's Entra ID address (ending /oauth2/v2.0) when single sign-on is Entra ID, otherwise ""."""
+    authorize = getattr(settings, "OIDC_OP_AUTHORIZATION_ENDPOINT", "")
+    if authorize.startswith(ENTRA + "/") and authorize.endswith("/authorize"):
+        return authorize.removesuffix("/authorize")
+    return ""
+
+
 def provider_logout_url(request):
     """Where Sign out sends the browser (settings.OIDC_OP_LOGOUT_URL_METHOD): Microsoft's sign-out page, then back here.
 
     Signing out of the hub alone would leave the browser signed in to Microsoft, and on a shared device the next person
     would press "Sign in" and be let in as the last one. Google Workspace has no such page, so it goes to sign-in.
+    The page's CSP lets the Sign out form follow this redirect (hub.security.content_security_policy).
     """
-    back = settings.SITE_URL + reverse("login")
-    authorize = settings.OIDC_OP_AUTHORIZATION_ENDPOINT
-    if not authorize.startswith("https://login.microsoftonline.com/") or not authorize.endswith("/authorize"):
+    endpoint = entra_endpoint()
+    if not endpoint:
         return reverse("login")
     # Microsoft only sends the browser back if this address is one of the app registration's redirect URIs.
-    return authorize.removesuffix("/authorize") + "/logout?" + urlencode({"post_logout_redirect_uri": back})
+    query = {"post_logout_redirect_uri": settings.SITE_URL + reverse("login")}
+    if request.session.get(LOGIN_HINT):
+        # Without it Microsoft asks which account to sign out, and the account stays signed in until someone picks it.
+        query["logout_hint"] = request.session[LOGIN_HINT]
+    return f"{endpoint}/logout?{urlencode(query)}"
