@@ -10,6 +10,11 @@ x-logging: &logging
 services:
   db:
     image: postgres:17
+    # Sized for the 4 GB server and about 500 staff; docs/operations/CAPACITY.md explains each value.
+    command: >-
+      postgres -c shared_buffers=1GB -c effective_cache_size=2GB -c work_mem=16MB
+      -c maintenance_work_mem=256MB -c random_page_cost=1.1
+    shm_size: 256mb  # Docker's 64 MB is too little for Postgres's parallel queries
     environment:
       POSTGRES_DB: hub
       POSTGRES_USER: hub

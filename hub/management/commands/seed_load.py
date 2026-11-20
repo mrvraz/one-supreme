@@ -161,8 +161,8 @@ class Command(BaseCommand):
         for rank, group in enumerate(self.groups):
             size = min(len(users), max(5, round(len(users) * 0.8 / (rank + 1) ** 0.8)))
             chosen = rnd.sample(users, size)
-            if rank == 0:
-                chosen = [u for u in chosen if u not in (self.user, self.admin)] + [self.user]  # the benchmark user's busiest group
+            if rank == 0:  # the benchmark's two accounts are in the busiest group
+                chosen += [u for u in (self.user, self.admin) if u not in chosen]
             for user in chosen:
                 members.append(Member(community_id=group.pk, user_id=user.pk))
                 self.mine[user.pk].add(group.pk)
@@ -305,7 +305,7 @@ class Command(BaseCommand):
     def chats(self):
         rnd, now, users = self.rnd, self.now, self.users
         conversations, people = [], []
-        pairs = set()
+        pairs = {(self.admin.pk, self.user.pk)}  # so both benchmark accounts have a chat to open
         while len(pairs) < round(self.n["chats"] * 0.85):
             a, b = sorted(rnd.sample(range(len(users)), 2))
             pairs.add((users[a].pk, users[b].pk))
