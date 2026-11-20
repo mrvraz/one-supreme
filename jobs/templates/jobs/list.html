@@ -1,0 +1,61 @@
+{% extends "hub/base.html" %}
+{% load static hubtags %}
+{% block title %}Jobs · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'jobs/jobs.css' %}">{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Jobs</h1>
+  {% if perms.jobs.add_vacancy %}<a class="btn primary" href="{% url 'jobs:new' %}">Add a vacancy</a>{% endif %}
+</div>
+<nav class="chips" aria-label="Which vacancies">
+  <a class="chip{% if not closed %} on{% endif %}" href="{% url 'jobs:list' %}">Open</a>
+  {% if perms.jobs.change_vacancy %}<a class="chip{% if closed %} on{% endif %}" href="?show=closed">Closed</a>{% endif %}
+</nav>
+<form class="job-filters" method="get" role="search">
+  {% if closed %}<input type="hidden" name="show" value="closed">{% endif %}
+  <label class="sr-only" for="q">Search jobs</label>
+  <input id="q" name="q" value="{{ q }}" placeholder="Search by job title, location or department" type="search">
+  <select name="location" aria-label="Location">
+    <option value="">All locations</option>
+    {% for value in locations %}<option value="{{ value }}"{% if value == location %} selected{% endif %}>{{ value }}</option>{% endfor %}
+  </select>
+  <select name="department" aria-label="Department">
+    <option value="">All departments</option>
+    {% for value in departments %}<option value="{{ value }}"{% if value == department %} selected{% endif %}>{{ value }}</option>{% endfor %}
+  </select>
+  <button class="btn">Search</button>
+  {% if q or location or department %}<a class="btn" href="?{% if closed %}show=closed{% endif %}">Clear</a>{% endif %}
+</form>
+<div class="card list">
+  {% for vacancy in page %}
+  <a class="row" href="{{ vacancy.get_absolute_url }}">
+    <span class="row-icon">{% include "hub/_icon.html" with name="briefcase" %}</span>
+    <span class="row-body">
+      <span class="row-title">{{ vacancy.title }}</span>
+      <span class="row-sub">{{ vacancy.location }} · {{ vacancy.department }} · {{ vacancy.get_contract_type_display }}</span>
+      {% if closed or vacancy.closes_on or vacancy.mine %}
+      <span class="row-sub">
+        {% if closed %}<span class="pill grey">Closed</span>
+        {% elif vacancy.closes_on %}<span class="pill orange">Closes {{ vacancy.closes_on|date:"j M Y" }}</span>{% endif %}
+        {% if vacancy.mine %}<span class="pill green">You're interested</span>{% endif %}
+      </span>
+      {% endif %}
+    </span>
+    <span class="row-side chevron"></span>
+  </a>
+  {% empty %}
+  <div class="empty">
+    {% if q or location or department %}<span class="empty-title">No vacancies match</span>Try other words, or clear the search.
+    {% elif closed %}<span class="empty-title">No closed vacancies</span>Vacancies appear here once they close.
+    {% else %}<span class="empty-title">No open vacancies right now</span>New jobs in the company will appear here.{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% if page.has_other_pages %}
+<nav class="pager" aria-label="Pages">
+  {% if page.has_previous %}<a class="btn" href="?{% query page=page.previous_page_number %}">Previous</a>{% endif %}
+  <span class="small muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="btn" href="?{% query page=page.next_page_number %}">Next</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

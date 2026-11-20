@@ -1,0 +1,14 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}{{ heading }} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'journeys/journeys.css' %}">{% endblock %}
+{% block content %}
+<div class="narrow">
+  <form class="card" method="post"{% if form.is_multipart %} enctype="multipart/form-data"{% endif %}>
+    {% csrf_token %}
+    <h1>{{ heading }}</h1>
+    {% include "hub/_form_fields.html" %}
+    <div class="actions"><a class="btn" href="{{ back }}">Cancel</a> <button class="btn primary">Save</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "hub/base.html" %}
+{% block title %}Birthdays · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'menu' %}">{% include "hub/_icon.html" with name="back" %}Menu</a>
+  <h1>Birthdays</h1>
+  <p class="muted small">Only colleagues who added their birthday to their profile are listed. <a href="{% url 'profile_edit' %}">Add yours</a>.</p>
+  <div class="card list">
+    {% for when, person in birthdays %}
+    <div class="row">
+      <a href="{{ person.get_absolute_url }}" tabindex="-1">{% include "hub/_avatar.html" with u=person size=40 %}</a>
+      <a class="row-body" href="{{ person.get_absolute_url }}"><span class="row-title">{{ person }}</span><span class="row-sub">{{ when|date:"j F" }}</span></a>
+      <span class="row-side">{% if when == today %}<span class="pill green">Today</span>{% endif %}
+        {% if person != user %}<a class="icon-btn" href="{% url 'chat:with' person.pk %}" aria-label="Send {{ person.first_name }} a message">{% include "hub/_icon.html" with name="chat" %}</a>{% endif %}</span>
+    </div>
+    {% empty %}<p class="empty"><span class="empty-title">No birthdays yet</span>Birthdays appear here when colleagues add them to their profile.</p>{% endfor %}
+  </div>
+  {% if anniversaries %}
+  <h2 class="section-title">Work anniversaries this month</h2>
+  <div class="card list">
+    {% for when, person, years in anniversaries %}
+    <a class="row" href="{{ person.get_absolute_url }}">{% include "hub/_avatar.html" with u=person size=40 %}
+      <span class="row-body"><span class="row-title">{{ person }}</span><span class="row-sub">{{ years }} year{{ years|pluralize }} on {{ when|date:"j F" }}</span></span></a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}{% if group %}{{ group }} files{% else %}Files{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'library/library.css' %}">{% endblock %}
+{% block content %}
+{% if group %}
+<a class="back" href="{{ group.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}Back</a>
+<div class="page-head"><h1>{{ group }}</h1></div>
+{% include "hub/_group_tabs.html" with group=group tab="files" %}
+{% else %}
+<div class="page-head"><h1>Files</h1></div>
+<nav class="chips" aria-label="Which files">
+  <a class="chip{% if tab == 'company' %} on{% endif %}" href="{% url 'library:files' %}"{% if tab == 'company' %} aria-current="true"{% endif %}>Company</a>
+  <a class="chip{% if tab == 'groups' %} on{% endif %}" href="?tab=groups"{% if tab == 'groups' %} aria-current="true"{% endif %}>My groups</a>
+  <a class="chip{% if tab == 'recent' %} on{% endif %}" href="?tab=recent"{% if tab == 'recent' %} aria-current="true"{% endif %}>Recent</a>
+</nav>
+{% endif %}
+
+{% if tab == "groups" %}
+<div class="card list">
+  {% for g in groups %}
+  <a class="row" href="{% url 'library:group_files' g.slug %}">
+    <span class="row-icon">{% include "hub/_icon.html" with name="groups" %}</span>
+    <span class="row-body"><span class="row-title">{{ g }}</span><span class="row-sub">{{ g.type_label }}</span></span>
+    <span class="row-side chevron"></span>
+  </a>
+  {% empty %}
+  <div class="empty"><span class="empty-title">You're not in any groups yet</span>Join a group to see its files here.</div>
+  {% endfor %}
+</div>
+{% else %}
+
+<form class="search lib-bar" method="get" role="search">
+  {% if tab == "recent" %}<input type="hidden" name="tab" value="recent">{% endif %}
+  <label class="sr-only" for="q">Search files</label>
+  <input id="q" name="q" value="{{ q }}" type="search" placeholder="Search by title or file name">
+  <button class="btn">Search</button>
+</form>
+
+{% if crumbs %}
+<nav class="crumbs small" aria-label="Folders">
+  <a href="{{ request.path }}">{% if group %}{{ group }}{% else %}Company{% endif %}</a>
+  {% for f in crumbs %}{% include "hub/_icon.html" with name="next" %}{% if forloop.last %}<b aria-current="page">{{ f.name }}</b>{% else %}<a href="?folder={{ f.pk }}">{{ f.name }}</a>{% endif %}{% endfor %}
+</nav>
+{% endif %}
+
+<div class="card list">
+  {% for f in folders %}
+  <a class="row" href="?folder={{ f.pk }}">
+    <span class="row-icon">{% include "hub/_icon.html" with name="folder" %}</span>
+    <span class="row-body"><span class="row-title">{{ f.name }}</span></span>
+    <span class="row-side chevron"></span>
+  </a>
+  {% endfor %}
+  {% for doc in docs %}{% include "library/_file_row.html" %}{% endfor %}
+  {% if not folders and not docs %}
+  <div class="empty">
+    {% if q %}<span class="empty-title">No files match “{{ q }}”</span>Try another word.
+    {% elif folder %}<span class="empty-title">This folder is empty</span>
+      {% if can_delete_folder %}<form method="post" action="{% url 'library:folder_delete' folder.pk %}" data-confirm="Delete this folder?">{% csrf_token %}<button class="btn danger">Delete folder</button></form>{% endif %}
+    {% else %}<span class="empty-title">No files yet</span>Files added here will show for everyone who can see this page.
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if tab == "company" and not q %}
+{% if can_add %}
+<details class="card lib-add">
+  <summary>Add a file</summary>
+  <form method="post" action="{% url 'library:upload' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if group %}<input type="hidden" name="community" value="{{ group.slug }}">{% endif %}
+    {% if folder %}<input type="hidden" name="folder" value="{{ folder.pk }}">{% endif %}
+    <div class="field">
+      <label for="file">File</label>
+      <input id="file" name="file" type="file" accept="{{ accept }}" required>
+      <p class="small muted">PDF, Word, Excel, PowerPoint, text, CSV, pictures or MP4 video. Up to {{ max_mb }} MB.</p>
+    </div>
+    <div class="field">
+      <label for="title">Title</label>
+      <input id="title" name="title" maxlength="200">
+      <p class="small muted">Leave empty to use the file name.</p>
+    </div>
+    <div class="actions"><button class="btn primary">Add file</button></div>
+  </form>
+</details>
+{% endif %}
+{% if can_add_folder %}
+<details class="card lib-add">
+  <summary>New folder</summary>
+  <form method="post" action="{% url 'library:folder_new' %}">
+    {% csrf_token %}
+    {% if group %}<input type="hidden" name="community" value="{{ group.slug }}">{% endif %}
+    {% if folder %}<input type="hidden" name="folder" value="{{ folder.pk }}">{% endif %}
+    <div class="field">
+      <label for="folder-name">Name</label>
+      <input id="folder-name" name="name" maxlength="120" required>
+    </div>
+    <div class="actions"><button class="btn primary">Create folder</button></div>
+  </form>
+</details>
+{% endif %}
+{% endif %}
+{% endif %}
+{% endblock %}

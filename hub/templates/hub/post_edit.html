@@ -1,0 +1,15 @@
+{% extends "hub/base.html" %}
+{% block title %}Edit post · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{{ post.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}Back</a>
+  <form class="card" method="post">
+    {% csrf_token %}
+    <h1>Edit post</h1>
+    {% include "hub/_toolbar.html" with target=form.body.id_for_label %}
+    {% include "hub/_form_fields.html" %}
+    <p class="small muted">Photos, polls and who it's for can't be changed. Delete the post and share it again for that.</p>
+    <div class="actions"><a class="btn" href="{{ post.get_absolute_url }}">Cancel</a> <button class="btn primary">Save</button></div>
+  </form>
+</div>
+{% endblock %}

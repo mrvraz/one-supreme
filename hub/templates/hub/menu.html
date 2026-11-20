@@ -1,0 +1,29 @@
+{% extends "hub/base.html" %}
+{% block title %}Menu · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <section class="card">
+    {% if user.cover %}<img class="cover" src="{{ user.cover.url }}" alt="">{% endif %}
+    <div class="menu-head">
+      <a class="avatar-wrap" href="{{ user.get_absolute_url }}">{% include "hub/_avatar.html" with u=user size=72 %}{% if user.dnd_on %}<i class="presence dnd" title="Do not disturb is on"></i>{% endif %}</a>
+      <div style="flex: 1; min-width: 0"><h1>{{ user }}</h1><p class="small muted" style="margin: 0">{{ user.job_title|default:"Add your job title in your profile" }}</p></div>
+      <form method="post" action="{% url 'dnd_toggle' %}">{% csrf_token %}
+        <button class="icon-btn" aria-pressed="{% if user.dnd_on %}true{% else %}false{% endif %}" title="{% if user.dnd_on %}Do not disturb is on. Tap to turn it off.{% else %}Turn on do not disturb{% endif %}">{% if user.dnd_on %}{% include "hub/_icon.html" with name="bell-off" %}{% else %}{% include "hub/_icon.html" with name="bell" %}{% endif %}<span class="sr-only">Do not disturb</span></button>
+      </form>
+    </div>
+    {% if user.dnd_on %}<p class="small muted" style="margin-top: 10px">Do not disturb is on. Notifications collect here, but nothing buzzes or emails you.</p>{% endif %}
+  </section>
+  <nav class="card list" aria-label="Sections">
+    {% for position, label, urlname, icon in rows %}
+    <a class="row" href="{% url urlname %}"><span class="row-icon">{% include "hub/_icon.html" with name=icon %}</span><span class="row-body"><span class="row-title">{{ label }}</span></span><span class="chevron"></span></a>
+    {% endfor %}
+  </nav>
+  <nav class="card list" aria-label="Account">
+    <a class="row" href="{% url 'settings' %}"><span class="row-icon">{% include "hub/_icon.html" with name="gear" %}</span><span class="row-body"><span class="row-title">Settings</span></span><span class="chevron"></span></a>
+    <a class="row" href="{% url 'about' %}"><span class="row-icon">{% include "hub/_icon.html" with name="info" %}</span><span class="row-body"><span class="row-title">About and help</span></span><span class="chevron"></span></a>
+    {% if perms.hub.view_insights %}<a class="row" href="{% url 'insights' %}"><span class="row-icon">{% include "hub/_icon.html" with name="chart" %}</span><span class="row-body"><span class="row-title">Insights</span></span><span class="chevron"></span></a>{% endif %}
+    {% if user.is_staff %}<a class="row" href="{% url 'admin:index' %}"><span class="row-icon">{% include "hub/_icon.html" with name="shield" %}</span><span class="row-body"><span class="row-title">Admin and moderation</span></span><span class="chevron"></span></a>{% endif %}
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="row danger" style="width: 100%; border: 0; background: none; text-align: left; font: inherit"><span class="row-icon">{% include "hub/_icon.html" with name="logout" %}</span><span class="row-body"><span class="row-title">Sign out</span></span></button></form>
+  </nav>
+</div>
+{% endblock %}

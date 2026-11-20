@@ -1,0 +1,11 @@
+/* Library-only styles. Colours come from the variables in hub's app.css, so both looks work. */
+.lib-bar { margin-bottom: 14px; }
+.crumbs { margin: 0 0 10px; color: var(--muted); }
+.crumbs b { color: var(--text); }
+.crumbs .icon { width: 16px; height: 16px; vertical-align: -3px; }
+.file-row { flex-wrap: wrap; }
+.file-row .pill { min-width: 50px; text-align: center; }
+.file-row .row-side { margin-left: auto; }
+.row-side form { margin: 0; }
+.lib-add > summary { cursor: pointer; font-weight: 500; }
+.lib-add[open] > summary { margin-bottom: 12px; }

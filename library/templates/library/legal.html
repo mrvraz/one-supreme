@@ -1,0 +1,13 @@
+{% extends "hub/base.html" %}
+{% block title %}Legal documents · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <div class="page-head"><h1>Legal documents</h1></div>
+  <div class="card list">
+    {% for article in articles %}{% include "library/_article_row.html" with sub=article.category.name %}
+    {% empty %}
+    <div class="empty"><span class="empty-title">No legal documents yet</span>Policies and terms will show here.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

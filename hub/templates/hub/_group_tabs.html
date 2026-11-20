@@ -1,0 +1,6 @@
+<nav class="tabs" aria-label="Group sections">
+  <a href="{{ group.get_absolute_url }}"{% if tab == "feed" %} aria-current="page"{% endif %}>Feed</a>
+  <a href="{% url 'library:group_featured' group.slug %}"{% if tab == "featured" %} aria-current="page"{% endif %}>Featured</a>
+  <a href="{% url 'community_members' group.slug %}"{% if tab == "members" %} aria-current="page"{% endif %}>Members</a>
+  <a href="{% url 'library:group_files' group.slug %}"{% if tab == "files" %} aria-current="page"{% endif %}>Files</a>
+</nav>

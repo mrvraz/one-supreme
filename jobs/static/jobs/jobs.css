@@ -1,0 +1,4 @@
+/* Jobs board: only what hub/app.css doesn't already cover. */
+.job-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.job-filters input { flex: 2 1 240px; }
+.job-filters select { flex: 1 1 160px; }

@@ -1,0 +1,31 @@
+{% extends "hub/base.html" %}
+{% block title %}Sign in · {{ SITE_NAME }}{% endblock %}
+{% block main_class %}login{% endblock %}
+{% block content %}
+<div class="card login-card">
+  {% if BRAND_LOGO %}
+  <img class="login-logo for-light" src="{{ BRAND_LOGO }}" alt="">
+  <img class="login-logo for-dark" src="{{ BRAND_LOGO_WHITE }}" alt="">
+  {% else %}<div class="login-mark" aria-hidden="true">{{ SITE_NAME|slice:":1"|upper }}</div>{% endif %}
+  <h1>{{ SITE_NAME }}</h1>
+  <p class="muted">The place to share news, photos and events with your colleagues.</p>
+  {% if request.GET.error %}<p class="msg error">We couldn't sign you in. Use your work account, or ask IT for help.</p>{% endif %}
+  {% if OIDC_ENABLED %}
+    <a class="btn primary wide" href="{% url 'oidc_authentication_init' %}{% if request.GET.next %}?next={{ request.GET.next|urlencode }}{% endif %}">Sign in with your work account</a>
+  {% endif %}
+  {% if ALLOW_PASSWORD_LOGIN %}
+    {% if OIDC_ENABLED %}<p class="small muted divider">or</p>{% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% if form.non_field_errors %}<div class="msg error">{{ form.non_field_errors }}</div>{% endif %}
+      <div class="field"><label for="id_username">Username</label>{{ form.username }}</div>
+      <div class="field"><label for="id_password">Password</label>{{ form.password }}</div>
+      <button class="btn primary wide">Sign in</button>
+    </form>
+  {% endif %}
+  {% if not OIDC_ENABLED and not ALLOW_PASSWORD_LOGIN %}
+    <p class="msg error">Sign-in isn't set up yet. An administrator needs to configure single sign-on.</p>
+  {% endif %}
+</div>
+{% endblock %}

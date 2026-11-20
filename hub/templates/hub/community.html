@@ -1,0 +1,52 @@
+{% extends "hub/base.html" %}
+{% block title %}{{ group }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<a class="back" href="{% if group.is_unit %}{% url 'organisation' %}{% else %}{% url 'communities' %}{% endif %}">{% include "hub/_icon.html" with name="back" %}{% if group.is_unit %}Organisation{% else %}Groups{% endif %}</a>
+<section class="card">
+  {% if group.cover %}<img class="cover" src="{{ group.cover.url }}" alt="">{% endif %}
+  <div class="group-head">
+    {% if not group.cover %}<span class="group-mark large" aria-hidden="true">{{ group.name|slice:":1"|upper }}</span>{% endif %}
+    <div class="group-head-text">
+      <h1>{{ group }}</h1>
+      <p class="muted small">{% if group.is_private %}{% include "hub/_icon.html" with name="lock" %} {% endif %}{{ group.type_label }} · {{ member_count }} member{{ member_count|pluralize }}</p>
+    </div>
+    <div class="actions" style="margin: 0">
+      {% if open_invite and open_invite.kind == "invite" %}
+        <form method="post" action="{% url 'invite_answer' open_invite.pk %}">{% csrf_token %}<button class="btn primary" name="answer" value="accept">Accept invitation</button> <button class="btn" name="answer" value="decline">Decline</button></form>
+      {% elif open_invite %}<span class="pill orange">Request sent</span>
+      {% elif is_member and not group.is_unit %}<form method="post" action="{% url 'community_leave' group.slug %}" data-confirm="Leave {{ group }}?">{% csrf_token %}<button class="btn">Leave group</button></form>
+      {% elif not is_member and not group.is_unit %}<form method="post" action="{% url 'community_join' group.slug %}">{% csrf_token %}<button class="btn primary">{% if group.is_private %}Ask to join{% else %}Join group{% endif %}</button></form>{% endif %}
+      {% if is_admin %}<a class="btn" href="{% url 'community_edit' group.slug %}">{% include "hub/_icon.html" with name="edit" %} Edit</a>{% endif %}
+    </div>
+  </div>
+  {% if group.description %}<p style="margin-top: 12px">{{ group.description|linebreaksbr }}</p>{% endif %}
+</section>
+{% if not can_view %}
+<div class="card empty"><span class="empty-title">{% include "hub/_icon.html" with name="lock" %} Members only</span>{% if group.is_unit %}Admins add people to business units and teams.{% else %}Ask to join to see what's shared here.{% endif %}</div>
+{% else %}
+{% include "hub/_group_tabs.html" with tab="feed" %}
+<div class="layout">
+  <div class="column">
+    {% if form %}{% include "hub/_composer.html" %}
+    {% elif not group.is_unit %}<div class="card muted small">Join the group to post here.</div>{% endif %}
+    {% for post in pinned %}{% include "hub/_post.html" %}{% endfor %}
+    {% for post in posts %}{% include "hub/_post.html" %}
+    {% empty %}{% if not pinned %}<div class="card empty">No posts here yet.</div>{% endif %}{% endfor %}
+    {% include "hub/_pager.html" %}
+  </div>
+  <aside class="sidebar">
+    <section class="card">
+      <h2>Events</h2>
+      {% for event in events %}{% include "hub/_event_row.html" with compact=True %}
+      {% empty %}<p class="muted small">No events planned.</p>{% endfor %}
+      {% if is_member %}<p class="small"><a href="{% url 'event_create' %}">Create an event</a></p>{% endif %}
+    </section>
+    <section class="card">
+      <h2>Members</h2>
+      <div class="member-faces">{% for m in members %}<a href="{{ m.get_absolute_url }}" title="{{ m }}">{% include "hub/_avatar.html" with u=m size=36 %}<span class="sr-only">{{ m }}</span></a>{% endfor %}</div>
+      <p class="small"><a href="{% url 'community_members' group.slug %}">See all members</a></p>
+    </section>
+  </aside>
+</div>
+{% endif %}
+{% endblock %}

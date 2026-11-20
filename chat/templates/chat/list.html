@@ -1,0 +1,42 @@
+{% extends "hub/base.html" %}
+{% load static hubtags %}
+{% block title %}Chat · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'chat/chat.css' %}">{% endblock %}
+{% block content %}
+<div class="narrow">
+  <div class="page-head">
+    <h1>Chat</h1>
+    <a class="icon-btn" href="{% url 'chat:new' %}" aria-label="New chat" title="New chat">{% include "hub/_icon.html" with name="plus" %}</a>
+  </div>
+  {% now "Ymd" as today %}
+  <div class="card list">
+    {% for row in page %}
+    <a class="row" href="{% url 'chat:thread' row.conversation_id %}">
+      {% if row.other %}{% include "hub/_avatar.html" with u=row.other size=48 %}
+      {% else %}<span class="group-mark" aria-hidden="true">{% include "hub/_icon.html" with name="groups" %}</span>{% endif %}
+      <span class="row-body">
+        <span class="row-title">{{ row.title }}{% if row.muted %} <span class="muted" title="Muted">{% include "hub/_icon.html" with name="bell-off" %}<span class="sr-only">Muted</span></span>{% endif %}</span>
+        <span class="row-sub chat-preview">
+          {% if not row.latest %}No messages yet
+          {% else %}
+            {% if row.latest.sender_id == user.pk %}You: {% elif row.conversation.is_group %}{{ row.latest.sender.first_name|default:row.latest.sender }}: {% endif %}
+            {% if row.latest.deleted_at %}Message deleted{% elif row.latest.body %}{{ row.latest.body|plain|truncatechars:80 }}{% else %}Picture{% endif %}
+          {% endif %}
+        </span>
+      </span>
+      <span class="row-side">
+        {% with at=row.conversation.last_message_at %}{% if at %}<time datetime="{{ at|date:'c' }}">{% if at|date:"Ymd" == today %}{{ at|date:"H:i" }}{% else %}{{ at|date:"j M" }}{% endif %}</time>{% endif %}{% endwith %}
+        {% if row.unread %}<b class="badge" aria-label="{{ row.unread }} unread">{{ row.unread }}</b>{% endif %}
+      </span>
+    </a>
+    {% empty %}
+    <div class="empty">
+      <span class="empty-title">Start messaging</span>
+      <p>Message a colleague, or start a group chat for your team.</p>
+      <a class="btn primary" href="{% url 'chat:new' %}">New chat</a>
+    </div>
+    {% endfor %}
+  </div>
+  {% include "hub/_pager.html" %}
+</div>
+{% endblock %}

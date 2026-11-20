@@ -1,0 +1,76 @@
+# Runs the whole hub on one server: database, app, daily email digest and the web server.
+# Start with:  docker compose up -d --build
+
+# Docker keeps every log line forever by default; this keeps the newest 250 MB per container.
+x-logging: &logging
+  options:
+    max-size: "50m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: hub
+      POSTGRES_USER: hub
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hub -d hub"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+    logging: *logging
+
+  app:
+    build: .
+    env_file: .env
+    environment: &app_env
+      DB_HOST: db
+      DB_NAME: hub
+      DB_USER: hub
+      X_ACCEL_MEDIA: "1"
+    volumes:
+      - media:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  # Every minute: scheduled posts, event reminders, push. Hourly: disk check. 05:00 UTC: digest, leaver check, clean-up.
+  scheduler:
+    build: .
+    env_file: .env
+    environment: *app_env
+    volumes:
+      - media:/data
+    command: python manage.py scheduler
+    depends_on:
+      - app
+    restart: unless-stopped
+    logging: *logging
+
+  web:
+    image: nginx:stable-alpine  # the maintained branch: "docker compose pull" brings its fixes
+    ports:
+      - "${HTTP_PORT:-8080}:80"
+    environment:
+      TRUSTED_PROXY: ${TRUSTED_PROXY:?Set TRUSTED_PROXY in .env to the address of Supreme's proxy}
+    volumes:
+      # Mounted as a template so nginx fills in TRUSTED_PROXY when it starts.
+      - ./deploy/nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - media:/data:ro
+    depends_on:
+      app:
+        condition: service_started
+        # nginx looks up the app's address once, when it starts. An update gives the app a new container (and
+        # usually a new address), so nginx restarts with it instead of sending every request to the old one.
+        restart: true
+    restart: unless-stopped
+    logging: *logging
+
+volumes:
+  pgdata:
+  media:

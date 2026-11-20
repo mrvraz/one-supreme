@@ -1,0 +1,14 @@
+{% extends "hub/base.html" %}
+{% block title %}Report · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <form class="card" method="post">
+    {% csrf_token %}
+    <h1>{% if kind == "person" %}Report {{ target }}{% else %}Report this {{ kind }}{% endif %}</h1>
+    {% if kind != "person" %}<blockquote class="quote">{{ target.body|truncatewords:60|linebreaksbr }}</blockquote>{% endif %}
+    <p class="muted small">Only moderators see your report. They can hide content that breaks the house rules{% if kind == "person" %} and talk to HR{% endif %}.</p>
+    {% include "hub/_form_fields.html" %}
+    <div class="actions"><a class="btn" href="{{ target.get_absolute_url }}">Cancel</a> <button class="btn primary">Send report</button></div>
+  </form>
+</div>
+{% endblock %}

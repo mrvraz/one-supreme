@@ -1,0 +1,20 @@
+<div class="row file-row">
+  <span class="pill grey">{{ doc.kind }}</span>
+  <span class="row-body">
+    <a class="row-title" href="{{ doc.file.url }}">{{ doc.title }}</a>
+    <span class="row-sub">{{ doc.size|filesizeformat }} · {{ doc.created_at|date:"j M Y" }}{% if doc.uploaded_by %} · {{ doc.uploaded_by }}{% endif %}{% if tab == "recent" and doc.community %} · {{ doc.community }}{% endif %}</span>
+  </span>
+  {% if can_feature or can_delete %}
+  <span class="row-side">
+    {% if can_feature %}
+    <form method="post" action="{% url 'library:document_feature' doc.pk %}">
+      {% csrf_token %}<input type="hidden" name="featured" value="{% if doc.is_featured %}0{% else %}1{% endif %}">
+      <button class="btn small">{% if doc.is_featured %}Remove from Featured{% else %}Add to Featured{% endif %}</button>
+    </form>
+    {% endif %}
+    {% if can_delete %}
+    <form method="post" action="{% url 'library:document_delete' doc.pk %}" data-confirm="Delete this file?">{% csrf_token %}<button class="btn small danger">Delete</button></form>
+    {% endif %}
+  </span>
+  {% endif %}
+</div>

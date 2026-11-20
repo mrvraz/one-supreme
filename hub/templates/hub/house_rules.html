@@ -1,0 +1,45 @@
+{% extends "hub/base.html" %}
+{% block title %}House rules · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+{# Edit this text with the company, then bump POLICY_VERSION so everyone is asked to accept the new version. #}
+<div class="narrow">
+  <article class="card rules">
+    <h1>House rules</h1>
+    <p class="muted">{% if accepted %}You've accepted these rules.{% else %}Please read these before you start. It takes two minutes.{% endif %}</p>
+
+    <h2>Be a good colleague</h2>
+    <ul>
+      <li>Be kind and respectful. No harassment, bullying, discrimination or personal attacks.</li>
+      <li>Only post photos of colleagues who are happy to be in them.</li>
+      <li>Keep it work-appropriate: nothing offensive, explicit or illegal.</li>
+      <li>No selling, political campaigning or chain messages.</li>
+    </ul>
+
+    <h2>Keep company information safe</h2>
+    <ul>
+      <li>Everyone in the company can see what you post, so don't share confidential, client or financial information.</li>
+      <li>Never post passwords, personal details of customers, or health information about anyone.</li>
+    </ul>
+
+    <h2>How your information is used</h2>
+    <ul>
+      <li>Your name, job title, photo and posts are visible to everyone in the company.</li>
+      <li>Moderators can hide posts that break these rules, and HR may review reported content.</li>
+      <li>When you delete a post or comment it disappears straight away, but it is kept for 30 days in case it's needed for a complaint, then removed for good.</li>
+      <li>Sign-ins and moderation actions are logged for security.</li>
+      <li>You can <a href="{% url 'export_my_data' %}">download a copy of your data</a> at any time.</li>
+      {% if PRIVACY_NOTICE_URL %}<li>Read the full <a href="{{ PRIVACY_NOTICE_URL }}" rel="noopener">privacy notice</a>.</li>{% endif %}
+    </ul>
+
+    <p>See something that breaks the rules? Use <strong>Report</strong> on the post or comment.</p>
+
+    {% if not accepted %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="btn primary wide">I agree to the house rules</button>
+    </form>
+    {% endif %}
+  </article>
+</div>
+{% endblock %}

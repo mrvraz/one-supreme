@@ -1,0 +1,12 @@
+{% extends "hub/base.html" %}
+{% block title %}{% if vacancy %}Edit vacancy{% else %}Add a vacancy{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <form class="card" method="post">
+    {% csrf_token %}
+    <h1>{% if vacancy %}Edit vacancy{% else %}Add a vacancy{% endif %}</h1>
+    {% include "hub/_form_fields.html" %}
+    <div class="actions"><a class="btn" href="{% if vacancy %}{{ vacancy.get_absolute_url }}{% else %}{% url 'jobs:list' %}{% endif %}">Cancel</a> <button class="btn primary">{% if vacancy %}Save changes{% else %}Publish vacancy{% endif %}</button></div>
+  </form>
+</div>
+{% endblock %}

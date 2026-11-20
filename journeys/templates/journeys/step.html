@@ -1,0 +1,24 @@
+{% extends "hub/base.html" %}
+{% load hubtags %}
+{% block title %}{{ step.title }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{{ journey.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}{{ journey.title }}</a>
+  <article class="card">
+    <p class="small muted">Step {{ step.number }} of {{ total }}{% if step.is_done %} · <span class="read-tick">{% include "hub/_icon.html" with name="check" %} Done</span>{% endif %}</p>
+    <h1>{{ step.title }}</h1>
+    {% if step.body %}<div class="post-body">{{ step.body|rich }}</div>{% endif %}
+    {% if step.link_url %}<p class="post-body">{% include "hub/_icon.html" with name="link" %} <a href="{{ step.link_url }}" target="_blank" rel="noopener noreferrer">{{ step.link_url }}</a></p>{% endif %}
+    <div class="actions">
+      {% if step.is_done %}
+        {% if next_step %}<a class="btn primary" href="{% url 'journeys:step' journey.pk next_step.pk %}">Next step</a>
+        {% else %}<a class="btn primary" href="{{ journey.get_absolute_url }}">Back to the journey</a>{% endif %}
+      {% elif can_finish %}
+        <form method="post" action="{% url 'journeys:step_done' journey.pk step.pk %}">{% csrf_token %}<button class="btn primary">Mark as done and continue</button></form>
+      {% else %}
+        <p class="small muted">Preview only. You cannot mark this step as done here.</p>
+      {% endif %}
+    </div>
+  </article>
+</div>
+{% endblock %}

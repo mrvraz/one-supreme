@@ -1,0 +1,14 @@
+{% extends "hub/base.html" %}
+{% block title %}Insights · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'menu' %}">{% include "hub/_icon.html" with name="back" %}Menu</a>
+<h1>Insights</h1>
+<p class="muted small">Totals only. Nobody's individual activity is shown here.</p>
+<div class="stat-grid">{% for label, value in figures %}<div class="card stat"><b>{{ value }}</b><span class="small muted">{{ label }}</span></div>{% endfor %}</div>
+<h2 class="section-title">Latest news: how many opened it</h2>
+<div class="card list">{% for item, read, audience, percent in news %}
+  <a class="row" href="{{ item.get_absolute_url }}"><span class="row-body"><span class="row-title">{{ item.title }}</span><span class="row-sub">{{ item.created_at|date:"j M Y" }} · {{ read }} of {{ audience }}</span><div class="progress" style="margin-top: 6px"><i style="width: {{ percent }}%"></i></div></span><span class="row-side">{{ percent }}%</span></a>
+{% empty %}<p class="empty">No news yet.</p>{% endfor %}</div>
+<h2 class="section-title">Most reacted-to posts this month</h2>
+<div class="card list">{% for post in popular %}<a class="row" href="{{ post.get_absolute_url }}"><span class="row-body"><span class="row-title">{{ post }}</span><span class="row-sub">{{ post.author }}</span></span><span class="row-side">{{ post.n }} reaction{{ post.n|pluralize }}</span></a>{% empty %}<p class="empty">No reactions yet this month.</p>{% endfor %}</div>
+{% endblock %}

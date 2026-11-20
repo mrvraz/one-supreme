@@ -1,0 +1,20 @@
+{% extends "hub/base.html" %}
+{% block title %}Organisation · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'menu' %}">{% include "hub/_icon.html" with name="back" %}Menu</a>
+  <h1>Organisation</h1>
+  <form class="chips" method="get" role="search">
+    <a class="chip{% if show == 'mine' and not q %} on{% endif %}" href="?">My teams</a>
+    <a class="chip{% if show == 'all' and not q %} on{% endif %}" href="?show=all">Everything</a>
+    <label class="sr-only" for="q">Search</label><input id="q" name="q" value="{{ q }}" placeholder="Search units and teams" type="search" style="max-width: 260px">
+  </form>
+  <div class="card list">
+    {% for unit in units %}
+    <a class="row" href="{{ unit.get_absolute_url }}"><span class="row-icon">{% include "hub/_icon.html" with name="building" %}</span>
+      <span class="row-body"><span class="row-title">{{ unit }}</span><span class="row-sub">{{ unit.type_label }}{% if unit.parent %} · part of {{ unit.parent }}{% endif %} · {{ unit.member_count }} member{{ unit.member_count|pluralize }}</span></span>
+      <span class="row-side">{% if unit.pk in mine %}<span class="pill">You're in it</span>{% endif %}<span class="chevron"></span></span></a>
+    {% empty %}<p class="empty">{% if show == "mine" and not q %}You're not in any team yet. Admins place people in business units, departments, locations and teams.{% else %}Nothing matches.{% endif %}</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

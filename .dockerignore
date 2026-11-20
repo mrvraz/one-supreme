@@ -1,0 +1,10 @@
+.env
+.venv
+.git
+.claude
+__pycache__
+*.pyc
+data
+staticfiles
+data-*
+demo-logins.txt

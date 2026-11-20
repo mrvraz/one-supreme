@@ -1,0 +1,6 @@
+<a class="card group-card" href="{{ group.get_absolute_url }}">
+  {% if group.cover %}<img class="group-mark" src="{{ group.cover.url }}" alt="" loading="lazy">{% else %}<span class="group-mark" aria-hidden="true">{{ group.name|slice:":1"|upper }}</span>{% endif %}
+  <span class="name">{{ group }}</span>
+  <span class="small muted">{% if group.is_private %}{% include "hub/_icon.html" with name="lock" %} {% endif %}{{ group.type_label }} · {{ group.member_count }} member{{ group.member_count|pluralize }}{% if joined %} · Joined{% endif %}</span>
+  {% if group.description %}<span class="small">{{ group.description|truncatewords:18 }}</span>{% endif %}
+</a>

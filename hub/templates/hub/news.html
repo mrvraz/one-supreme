@@ -1,0 +1,31 @@
+{% extends "hub/base.html" %}{% load hubtags %}
+{% block title %}News · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <div class="page-head">
+    <h1>News</h1>
+    {% if can_publish %}<a class="btn primary" href="{% url 'news_new' %}">{% include "hub/_icon.html" with name="plus" %} Write news</a>{% endif %}
+  </div>
+  <form class="search" method="get" role="search">
+    {% if show != "all" %}<input type="hidden" name="show" value="{{ show }}">{% endif %}
+    <label class="sr-only" for="q">Search news</label><input id="q" name="q" value="{{ q }}" placeholder="Search news" type="search">
+  </form>
+  <div class="chips" style="margin-top: 12px">{% for key, label in filters %}<a class="chip{% if key == show %} on{% endif %}" href="?show={{ key }}">{{ label }}</a>{% endfor %}</div>
+  <div class="card list">
+    {% for item in page %}
+    <a class="news-item{% if not item.is_read %} unread{% endif %}" href="{% if item.is_draft or item.is_scheduled %}{% url 'news_edit' item.pk %}{% else %}{{ item.get_absolute_url }}{% endif %}">
+      <span class="news-text">
+        <span class="news-title">{{ item.title }}</span>
+        <span class="small muted">{{ item.body|plain|truncatewords:22 }}</span><br>
+        <span class="small muted">{% if item.is_draft %}<span class="pill grey">Draft</span>{% elif item.is_scheduled %}<span class="pill orange">Scheduled for {{ item.created_at|date:"j M, H:i" }}</span>{% else %}{{ item.created_at|date:"j M Y" }}{% endif %} · {{ item.author }}{% with names=item.audiences.all %}{% if names %} · {{ names.0 }}{% if names|length > 1 %} +{{ names|length|add:"-1" }}{% endif %}{% endif %}{% endwith %}</span><br>
+        <span class="small muted">{% if item.requires_ack %}<span class="pill orange">Must read</span> {% endif %}{% if item.reaction_count %}{{ item.reaction_count }} reaction{{ item.reaction_count|pluralize }} · {% endif %}{{ item.comment_count }} comment{{ item.comment_count|pluralize }}{% if item.is_read and item.author_id != user.pk %} · <span class="read-tick">{% include "hub/_icon.html" with name="check" %} Read</span>{% endif %}</span>
+      </span>
+      {% if item.cover %}<img class="news-thumb" src="{{ item.cover.url }}" alt="" loading="lazy">{% endif %}
+    </a>
+    {% empty %}
+    <p class="empty"><span class="empty-title">No news yet</span>{% if show == "unread" %}You're all caught up.{% else %}Check back later for the latest updates.{% endif %}</p>
+    {% endfor %}
+  </div>
+  {% include "hub/_pager.html" %}
+</div>
+{% endblock %}

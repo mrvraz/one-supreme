@@ -1,0 +1,37 @@
+<form class="card composer" method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="msg error">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="composer-top">
+    {% include "hub/_avatar.html" with u=user %}
+    <label class="sr-only" for="{{ form.body.id_for_label }}">Share an update</label>
+    {{ form.body }}
+  </div>
+  {% include "hub/_toolbar.html" with target=form.body.id_for_label %}
+  {{ form.body.errors }}
+  <p class="small muted" data-file-names hidden aria-live="polite"></p>
+  {{ form.files.errors }}
+  <div class="composer-extra">
+    <details{% if form.poll_options.errors or form.poll_options.value %} open{% endif %}>
+      <summary class="small muted">{% include "hub/_icon.html" with name="poll" %} Make it a poll</summary>
+      <div class="field"><label for="{{ form.poll_options.id_for_label }}">{{ form.poll_options.label }}</label>{{ form.poll_options }}{{ form.poll_options.errors }}
+        <p class="small muted">Your text above is the question. Put each answer on its own line.</p></div>
+      <div class="field"><label for="{{ form.poll_closes_at.id_for_label }}">{{ form.poll_closes_at.label }}</label>{{ form.poll_closes_at }}{{ form.poll_closes_at.errors }}</div>
+    </details>
+    <details{% if form.publish_at.errors or form.publish_at.value %} open{% endif %}>
+      <summary class="small muted">{% include "hub/_icon.html" with name="clock" %} Post later</summary>
+      <div class="field"><label for="{{ form.publish_at.id_for_label }}">{{ form.publish_at.label }}</label>{{ form.publish_at }}{{ form.publish_at.errors }}</div>
+    </details>
+    <details>
+      <summary class="small muted">{% include "hub/_icon.html" with name="photo" %} Describe the photos</summary>
+      <label class="small" for="{{ form.alt_text.id_for_label }}">{{ form.alt_text.label }}</label>{{ form.alt_text }}
+    </details>
+  </div>
+  <div class="composer-row">
+    <label class="btn file-btn">{% include "hub/_icon.html" with name="photo" %} Photo or video {{ form.files }}</label>
+    <div class="composer-send">
+      {% if form.community %}<label class="inline-select"><span class="small muted">{{ form.community.label }}</span> {{ form.community }}</label>{% endif %}
+      {% if form.is_announcement %}<label class="check small">{{ form.is_announcement }} Announcement</label>{% endif %}
+      <button class="btn primary">Post</button>
+    </div>
+  </div>
+</form>

@@ -1,0 +1,6 @@
+<a class="row" href="{{ article.get_absolute_url }}">
+  <span class="row-icon">{% include "hub/_icon.html" with name="book" %}</span>
+  <span class="row-body"><span class="row-title">{{ article.title }}</span>{% if sub %}<span class="row-sub">{{ sub }}</span>{% endif %}</span>
+  {% if article.is_legal %}<span class="row-side"><span class="pill grey">Legal</span></span>{% endif %}
+  <span class="row-side chevron"></span>
+</a>

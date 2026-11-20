@@ -1,0 +1,31 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}Progress: {{ journey.title }} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'journeys/journeys.css' %}">{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{{ journey.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}{{ journey.title }}</a>
+  <div class="page-head"><h1>Progress</h1></div>
+  <div class="stat-grid journey-stats">
+    <p class="card stat"><b>{{ assigned }}</b> assigned</p>
+    <p class="card stat"><b>{{ finished }}</b> finished</p>
+  </div>
+  <div class="card flat">
+    {% if rows %}
+    <table class="journey-table">
+      <thead><tr><th scope="col">Person</th><th scope="col">Status</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td><a href="{{ row.user.get_absolute_url }}">{% include "hub/_avatar.html" with u=row.user size=32 %} {{ row.user }}</a></td>
+          <td>{% if row.completed_at %}<span class="pill green">Finished on {{ row.completed_at|date:"j F Y" }}</span>{% elif row.done %}<span class="pill">{{ row.done }} of {{ row.total }}</span>{% else %}<span class="pill grey">Not started</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty"><span class="empty-title">No one yet</span>Publish the journey to give it to people.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

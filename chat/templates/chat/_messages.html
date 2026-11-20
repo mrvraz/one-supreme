@@ -1,0 +1,33 @@
+{% load hubtags %}{% for m in msgs %}
+<div class="chat-msg{% if m.sender_id == user.pk %} mine{% endif %}{% if m.deleted_at %} gone{% endif %}" id="msg-{{ m.pk }}">
+  {% if m.sender_id != user.pk %}{% include "hub/_avatar.html" with u=m.sender size=28 %}{% endif %}
+  <div class="chat-msg-main">
+    {% if m.sender_id == user.pk %}<span class="sr-only">You</span>
+    {% elif conversation.is_group %}<a class="chat-sender small" href="{{ m.sender.get_absolute_url }}">{{ m.sender }}</a>
+    {% else %}<span class="sr-only">{{ m.sender }}</span>{% endif %}
+    <div class="bubble">
+      {% if m.deleted_at %}Message deleted{% else %}
+      {{ m.body|rich }}
+      {% if m.image %}<a href="{{ m.image.url }}"><img src="{{ m.image.url }}" alt="Picture from {{ m.sender }}" loading="lazy"></a>{% endif %}
+      {% endif %}
+    </div>
+    <div class="chat-meta small muted">
+      <time datetime="{{ m.created_at|date:'c' }}">{{ m.created_at|date:"j M, H:i" }}</time>
+      {% if m.deleted_at %}
+      {% elif m.sender_id == user.pk %}
+      <form method="post" action="{% url 'chat:delete_message' m.pk %}" data-confirm="Delete this message?">{% csrf_token %}<button class="link">Delete</button></form>
+      {% else %}
+      <details class="chat-report">
+        <summary>Report</summary>
+        <form method="post" action="{% url 'chat:report' m.pk %}">
+          {% csrf_token %}
+          <label class="sr-only" for="why-{{ m.pk }}">What is wrong with this message?</label>
+          <input id="why-{{ m.pk }}" name="reason" required maxlength="800" placeholder="What is wrong with this message?">
+          <button class="btn small">Send to moderators</button>
+        </form>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}

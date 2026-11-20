@@ -1,0 +1,15 @@
+{% extends "hub/base.html" %}
+{% block title %}Settings · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'menu' %}">{% include "hub/_icon.html" with name="back" %}Menu</a>
+  <h1>Settings</h1>
+  <nav class="card list">
+    <a class="row" href="{% url 'profile_edit' %}"><span class="row-icon">{% include "hub/_icon.html" with name="people" %}</span><span class="row-body"><span class="row-title">Profile</span><span class="row-sub">Photo, job title, pronouns, birthday and more</span></span><span class="chevron"></span></a>
+    <a class="row" href="{% url 'settings_notifications' %}"><span class="row-icon">{% include "hub/_icon.html" with name="bell" %}</span><span class="row-body"><span class="row-title">Notifications</span><span class="row-sub">Push, email, quiet hours</span></span><span class="chevron"></span></a>
+    <a class="row" href="{% url 'settings_reminders' %}"><span class="row-icon">{% include "hub/_icon.html" with name="calendar" %}</span><span class="row-body"><span class="row-title">Event reminders</span><span class="row-sub">When to remind you before events</span></span><span class="chevron"></span></a>
+    <a class="row" href="{% url 'settings_privacy' %}"><span class="row-icon">{% include "hub/_icon.html" with name="lock" %}</span><span class="row-body"><span class="row-title">Privacy and security</span><span class="row-sub">What colleagues see, and your data</span></span><span class="chevron"></span></a>
+    <a class="row" href="{% url 'settings_appearance' %}"><span class="row-icon">{% include "hub/_icon.html" with name="photo" %}</span><span class="row-body"><span class="row-title">Appearance and language</span><span class="row-sub">Daylight, Daylight Dark or match your device</span></span><span class="chevron"></span></a>
+  </nav>
+</div>
+{% endblock %}

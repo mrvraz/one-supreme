@@ -1,0 +1,5 @@
+# Rebuilt or downloaded: never commit
+node_modules/
+public/
+# This computer's link to the Netlify site
+.netlify/

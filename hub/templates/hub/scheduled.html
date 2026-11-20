@@ -1,0 +1,27 @@
+{% extends "hub/base.html" %}
+{% block title %}Scheduled posts · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'menu' %}">{% include "hub/_icon.html" with name="back" %}Menu</a>
+  <div class="page-head"><h1>Scheduled posts</h1></div>
+  <div class="chips">
+    <a class="chip{% if not kind %} on{% endif %}" href="?">All</a>
+    <a class="chip{% if kind == 'news' %} on{% endif %}" href="?type=news">News</a>
+    <a class="chip{% if kind == 'update' %} on{% endif %}" href="?type=update">Posts</a>
+    <a class="chip{% if kind == 'poll' %} on{% endif %}" href="?type=poll">Polls</a>
+  </div>
+  <div class="card list">
+    {% for post in posts %}
+    <div class="row">
+      <span class="row-icon">{% include "hub/_icon.html" with name="clock" %}</span>
+      <a class="row-body" href="{{ post.get_absolute_url }}"><span class="row-title">{{ post }}</span>
+        <span class="row-sub">{{ post.get_kind_display }} · {% if post.is_draft %}Draft{% else %}Goes out {{ post.created_at|date:"D j M, H:i" }}{% endif %}</span></a>
+      <span class="row-side">
+        <a class="btn small" href="{% if post.kind == 'news' %}{% url 'news_edit' post.pk %}{% else %}{% url 'post_edit' post.pk %}{% endif %}">Edit</a>
+        <form method="post" action="{% url 'post_publish_now' post.pk %}">{% csrf_token %}<button class="btn small primary">Publish now</button></form>
+      </span>
+    </div>
+    {% empty %}<p class="empty"><span class="empty-title">No scheduled posts</span>When you choose "Post later" or save a draft, it waits here.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

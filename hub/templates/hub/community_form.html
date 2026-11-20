@@ -1,0 +1,14 @@
+{% extends "hub/base.html" %}
+{% block title %}{% if group %}Edit {{ group }}{% else %}Start a group{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% if group %}{{ group.get_absolute_url }}{% else %}{% url 'communities' %}{% endif %}">{% include "hub/_icon.html" with name="back" %}Back</a>
+  <form class="card" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <h1>{% if group %}Edit {{ group }}{% else %}Start a group{% endif %}</h1>
+    {% if not group %}<p class="muted small">Groups are for teams, projects and hobbies. Public groups are open to everyone; private ones need an invitation or a request.</p>{% endif %}
+    {% include "hub/_form_fields.html" %}
+    <div class="actions"><a class="btn" href="{% if group %}{{ group.get_absolute_url }}{% else %}{% url 'communities' %}{% endif %}">Cancel</a> <button class="btn primary">{% if group %}Save{% else %}Create group{% endif %}</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}{% if group %}{{ group }} featured{% else %}Featured{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'library/library.css' %}">{% endblock %}
+{% block content %}
+{% if group %}
+<a class="back" href="{{ group.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}Back</a>
+<div class="page-head"><h1>{{ group }}</h1></div>
+{% include "hub/_group_tabs.html" with group=group tab="featured" %}
+{% else %}
+<div class="page-head"><h1>Featured</h1></div>
+{% endif %}
+
+<h2 class="section-title">Links</h2>
+<div class="card list">
+  {% for link in links %}
+  <div class="row file-row">
+    <span class="row-icon">{% include "hub/_icon.html" with name="link" %}</span>
+    <span class="row-body">
+      <a class="row-title" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{{ link.title }}</a>
+      <span class="row-sub">{{ link.url }}</span>
+    </span>
+    {% if can_feature %}
+    <span class="row-side">
+      <form method="post" action="{% url 'library:link_delete' link.pk %}" data-confirm="Remove this link?">{% csrf_token %}<button class="btn small danger">Remove</button></form>
+    </span>
+    {% endif %}
+  </div>
+  {% empty %}
+  <div class="empty"><span class="empty-title">No featured links yet</span>Useful links will show here.</div>
+  {% endfor %}
+</div>
+{% if can_feature %}
+<details class="card lib-add">
+  <summary>Add a link</summary>
+  <form method="post" action="{% url 'library:link_new' %}">
+    {% csrf_token %}
+    {% if group %}<input type="hidden" name="community" value="{{ group.slug }}">{% endif %}
+    <div class="field"><label for="link-title">Title</label><input id="link-title" name="title" maxlength="120" required></div>
+    <div class="field">
+      <label for="link-url">Web address</label>
+      <input id="link-url" name="url" type="url" maxlength="500" placeholder="https://" required>
+    </div>
+    <div class="actions"><button class="btn primary">Add link</button></div>
+  </form>
+</details>
+{% endif %}
+
+<h2 class="section-title">Files</h2>
+<div class="card list">
+  {% for doc in docs %}{% include "library/_file_row.html" %}
+  {% empty %}
+  <div class="empty">
+    <span class="empty-title">No featured files yet</span>
+    {% if can_feature %}Open <a href="{% if group %}{% url 'library:group_files' group.slug %}{% else %}{% url 'library:files' %}{% endif %}">Files</a> and choose “Add to Featured” next to a file.{% else %}Important files will show here.{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

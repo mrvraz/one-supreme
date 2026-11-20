@@ -1,0 +1,52 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}Knowledge base · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'library/library.css' %}">{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Knowledge base</h1>
+  <form class="search" method="get" role="search">
+    <label class="sr-only" for="q">Search the knowledge base</label>
+    <input id="q" name="q" value="{{ q }}" type="search" placeholder="Search articles">
+    <button class="btn">Search</button>
+  </form>
+</div>
+
+{% if perms.library.add_article and not q %}
+{% if has_categories %}<p><a class="btn primary" href="{% url 'library:article_new' %}">New article</a></p>
+{% else %}<p class="muted small">Add a category first. Then you can write articles.</p>{% endif %}
+<details class="card lib-add">
+  <summary>New category</summary>
+  <form method="post" action="{% url 'library:category_new' %}">
+    {% csrf_token %}
+    <div class="field"><label for="category-name">Name</label><input id="category-name" name="name" maxlength="120" required></div>
+    <div class="actions"><button class="btn primary">Add category</button></div>
+  </form>
+</details>
+{% endif %}
+
+{% if q %}
+<div class="card list">
+  {% for article in results %}{% include "library/_article_row.html" with sub=article.category.name %}
+  {% empty %}
+  <div class="empty"><span class="empty-title">No articles match “{{ q }}”</span>Try another word.</div>
+  {% endfor %}
+</div>
+{% elif empty %}
+<div class="card empty"><span class="empty-title">The knowledge base is empty</span>Guides and answers will show here.</div>
+{% else %}
+{% for category in categories %}
+{% with articles=category.articles.all %}
+{% if articles or perms.library.add_article %}
+<h2 class="section-title">{{ category.name }}</h2>
+<div class="card list">
+  {% for article in articles %}{% include "library/_article_row.html" %}
+  {% empty %}
+  <p class="empty">No articles here yet.</p>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+{% endfor %}
+{% endif %}
+{% endblock %}

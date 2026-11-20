@@ -1,0 +1,10 @@
+{% extends "hub/base.html" %}
+{% block title %}Licences · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'about' %}">{% include "hub/_icon.html" with name="back" %}About</a>
+  <h1>Open-source licences</h1>
+  <p class="muted small">{{ SITE_NAME }} is built with these open-source projects. Thank you to everyone who makes them.</p>
+  <div class="card list">{% for name, licence in licences %}<div class="row"><span class="row-body"><span class="row-title">{{ name }}</span></span><span class="row-side">{{ licence }}</span></div>{% endfor %}</div>
+</div>
+{% endblock %}

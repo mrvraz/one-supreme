@@ -1,0 +1,19 @@
+{% extends "hub/base.html" %}
+{% block title %}Groups · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'menu' %}">{% include "hub/_icon.html" with name="back" %}Menu</a>
+<div class="page-head">
+  <h1>Groups</h1>
+  <a class="btn primary" href="{% url 'community_create' %}">{% include "hub/_icon.html" with name="plus" %} Start a group</a>
+</div>
+<form class="chips" method="get" role="search">
+  <a class="chip{% if show == 'mine' and not q %} on{% endif %}" href="?">My groups</a>
+  <a class="chip{% if show == 'all' and not q %} on{% endif %}" href="?show=all">All groups</a>
+  <label class="sr-only" for="q">Search groups</label><input id="q" name="q" value="{{ q }}" placeholder="Search groups" type="search" style="max-width: 260px">
+</form>
+<div class="group-grid">
+  {# "Joined" only helps where joined and other groups are mixed, not under My groups #}
+  {% for group in groups %}{% if group.pk in mine and q or group.pk in mine and show != "mine" %}{% include "hub/_group_card.html" with joined=True %}{% else %}{% include "hub/_group_card.html" %}{% endif %}
+  {% empty %}<p class="muted">{% if show == "mine" and not q %}You're not in any groups yet. <a href="?show=all">See all groups</a>.{% else %}No groups match.{% endif %}</p>{% endfor %}
+</div>
+{% endblock %}

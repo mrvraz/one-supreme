@@ -1,0 +1,51 @@
+{% load static %}<!doctype html>
+<html lang="en-GB" data-look="{{ LOOK }}" data-look-pref="{{ LOOK_PREF }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+  <meta name="theme-color" content="{% if LOOK == 'daylight-dark' %}#000000{% else %}#F2F2F7{% endif %}">
+  <script src="{% static 'hub/theme.js' %}"></script>
+  <link rel="manifest" href="{% url 'manifest' %}">
+  {% if BRAND_ICON %}<link rel="icon" href="{{ BRAND_ICON }}" type="image/png">
+  <link rel="apple-touch-icon" href="{{ BRAND_ICON }}">{% else %}<link rel="icon" href="{% url 'icon' %}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{% url 'icon' %}">{% endif %}
+  <link rel="stylesheet" href="{% static 'hub/app.css' %}">
+  {% if BRAND_COLOR %}<style>:root, html[data-look] { --accent: {{ BRAND_COLOR }}; --accent-strong: color-mix(in srgb, {{ BRAND_COLOR }} 78%, var(--text)); --accent-soft: color-mix(in srgb, {{ BRAND_COLOR }} 14%, transparent); }</style>{% endif %}
+  {% block extra_head %}{% endblock %}
+  <script src="{% static 'hub/app.js' %}" defer></script>
+</head>
+<body>
+{% if user.is_authenticated %}
+<header class="topbar">
+  <a class="brand" href="{% url 'feed' %}">{% if BRAND_ICON %}<img src="{{ BRAND_ICON }}" alt="" width="28" height="28">{% endif %}{{ SITE_NAME }}</a>
+  <nav class="nav" aria-label="Main">
+    <a href="{% url 'feed' %}"{% if nav == 'feed' %} aria-current="page"{% endif %}>{% include "hub/_icon.html" with name="feed" %}<span>Feed</span></a>
+    <a href="{% url 'chat:list' %}"{% if nav == 'chat' %} aria-current="page"{% endif %}>{% include "hub/_icon.html" with name="chat" %}<span>Chat</span>{% if nav_badges.chat %}<b class="badge" aria-label="{{ nav_badges.chat }} unread">{{ nav_badges.chat }}</b>{% endif %}</a>
+    <a href="{% url 'news' %}"{% if nav == 'news' %} aria-current="page"{% endif %}>{% include "hub/_icon.html" with name="news" %}<span>News</span>{% if unread_news %}<b class="badge" aria-label="{{ unread_news }} unread">{{ unread_news }}</b>{% endif %}</a>
+    <a href="{% url 'notifications' %}"{% if nav == 'alerts' %} aria-current="page"{% endif %}>{% include "hub/_icon.html" with name="bell" %}<span>Notifications</span>{% if unread_count %}<b class="badge" aria-label="{{ unread_count }} unread">{{ unread_count }}</b>{% endif %}</a>
+    <a href="{% url 'menu' %}"{% if nav == 'menu' %} aria-current="page"{% endif %}>{% include "hub/_icon.html" with name="menu" %}<span>Menu</span></a>
+  </nav>
+  <div class="topbar-end">
+    {# Which icon shows follows the look on screen, also when "match my device" picked it. app.js switches without a reload. #}
+    <form method="post" action="{% url 'look_switch' %}" data-look-switch>{% csrf_token %}
+      <button class="icon-btn" name="look" value="{% if LOOK == 'daylight-dark' %}daylight{% else %}daylight-dark{% endif %}">
+        <span class="when-light">{% include "hub/_icon.html" with name="moon" %}<span class="sr-only">Switch to the dark look</span></span>
+        <span class="when-dark">{% include "hub/_icon.html" with name="sun" %}<span class="sr-only">Switch to the light look</span></span>
+      </button>
+    </form>
+    <a class="icon-btn" href="{% url 'search' %}" aria-label="Search">{% include "hub/_icon.html" with name="search" %}</a>
+    <a class="avatar-wrap" href="{{ user.get_absolute_url }}" aria-label="Your profile">{% include "hub/_avatar.html" with u=user size=36 %}{% if user.dnd_on %}<i class="presence dnd" title="Do not disturb is on"></i>{% endif %}</a>
+  </div>
+</header>
+{% endif %}
+<main class="{% block main_class %}page{% endblock %}">
+  {% if messages %}
+  <div class="messages" role="status">
+    {% for message in messages %}<p class="msg {{ message.tags }}">{{ message }}</p>{% endfor %}
+  </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

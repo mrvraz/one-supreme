@@ -1,0 +1,59 @@
+/* Chat. Colours come from the variables in hub/app.css, so both looks work. */
+
+/* ---------- List of chats, people pickers ---------- */
+.chat-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-picker { max-height: 50vh; overflow-y: auto; margin-bottom: 14px; border-radius: var(--radius-sm); background: var(--surface-2); }
+.chat-picker .row { cursor: pointer; }
+.chat-found { margin-top: 14px; }
+
+/* ---------- One chat: the panel fills the screen and only the messages scroll ---------- */
+.chat-page { margin-bottom: 0; padding-bottom: 0; }
+.chat {
+  display: flex; flex-direction: column; min-height: 300px; margin: 0; padding: 0;
+  height: calc(100vh - 96px); height: calc(100dvh - 96px); /* top bar 60px + 20px above + 16px below */
+}
+.chat-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 0.5px solid var(--g-sep); }
+.chat-head .back { flex: none; margin: 0; }
+.chat-head .group-mark { width: 36px; height: 36px; border-radius: 8px; font-size: 17px; } /* --radius minus the 10px gap */
+.chat-head h1 { flex: 1; min-width: 0; margin: 0; font-size: 18px; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-log { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.chat-log > :first-child { margin-top: auto; } /* a short chat sits at the bottom, next to the message box */
+.chat-earlier { margin-bottom: 0; text-align: center; }
+
+.chat-msg { display: flex; align-items: flex-end; gap: 8px; max-width: min(82%, 520px); }
+.chat-msg.mine { align-self: flex-end; }
+.chat-msg-main { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.chat-msg.mine .chat-msg-main { align-items: flex-end; }
+.chat-sender { margin: 0 0 2px 12px; color: var(--muted); font-weight: 600; }
+.chat-msg .bubble { max-width: 100%; }
+.chat-msg .bubble p + p, .chat-msg .bubble p + ul, .chat-msg .bubble p + ol { margin-top: 6px; }
+.chat-msg .bubble ul, .chat-msg .bubble ol { margin: 0; padding-left: 20px; }
+/* A fixed height, so the list does not jump while pictures load. */
+.chat-msg .bubble img { width: auto; height: 200px; max-height: none; margin: 4px 0; object-fit: cover; }
+.chat-msg.mine .bubble { background: var(--accent); color: var(--accent-ink); }
+.chat-msg.mine .bubble a { color: inherit; text-decoration: underline; }
+.chat-msg.gone .bubble { background: none; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--muted); font-style: italic; }
+.chat-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 2px 6px 0; }
+.chat-msg.mine .chat-meta { justify-content: flex-end; }
+.chat-meta form { margin: 0; }
+.chat-meta button.link, .chat-report > summary { font-weight: 500; cursor: pointer; }
+.chat-report > summary { list-style: none; }
+.chat-report > summary::-webkit-details-marker { display: none; }
+.chat-report > summary:hover { text-decoration: underline; }
+.chat-report[open] { flex-basis: 100%; }
+.chat-report form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.chat-report input { flex: 1; min-width: 200px; padding: 6px 12px; }
+
+/* 8px from the card's rounded bottom corners, so the box and buttons use --radius minus 8px. */
+.chat-composer { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 0; padding: 8px; border-top: 0.5px solid var(--g-sep); }
+.chat-composer textarea { flex: 1; min-width: 0; min-height: 40px; max-height: 140px; padding: 9px 14px; border-radius: var(--radius-sm); resize: none; field-sizing: content; }
+.chat-composer .icon-btn { border-radius: var(--radius-sm); }
+.chat-send { background: var(--accent); color: var(--accent-ink); }
+.chat-send:disabled { opacity: 0.5; cursor: default; }
+.chat-file { flex-basis: 100%; margin: 0; }
+
+@media (max-width: 760px) {
+  /* Top bar 60px + 8px above, and the floating tab bar (96px) below. */
+  .chat { height: calc(100vh - 172px); height: calc(100dvh - 172px - env(safe-area-inset-bottom, 0px)); }
+  .chat-msg { max-width: 90%; }
+}

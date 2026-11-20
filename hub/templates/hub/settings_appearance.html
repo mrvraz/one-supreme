@@ -1,0 +1,26 @@
+{% extends "hub/base.html" %}
+{% block title %}Appearance · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'settings' %}">{% include "hub/_icon.html" with name="back" %}Settings</a>
+  <h1>Appearance and language</h1>
+  <form class="card" method="post">
+    {% csrf_token %}
+    <h2>Look</h2>
+    <div class="look-row" role="radiogroup" aria-label="Look">
+      {% for value, label in looks %}
+      <label class="look-opt" aria-checked="{% if user.look == value %}true{% else %}false{% endif %}">
+        <input class="sr-only" type="radio" name="look" value="{{ value }}"{% if user.look == value %} checked{% endif %}>
+        <span class="lp lp-{{ value }}" aria-hidden="true"><i class="lp-t"></i><i class="lp-c"></i><i class="lp-c"></i><i class="lp-n"></i></span>
+        <span class="look-name">{{ label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% if languages %}
+    <div class="field"><label for="language">Translate posts into</label>
+      <select id="language" name="language">{% for code, name in languages %}<option value="{{ code }}"{% if user.language == code %} selected{% endif %}>{{ name }}</option>{% endfor %}</select></div>
+    {% endif %}
+    <div class="actions"><button class="btn primary">Save</button></div>
+  </form>
+</div>
+{% endblock %}

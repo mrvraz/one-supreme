@@ -1,0 +1,19 @@
+# The office-screen site for the One Supreme Blueprint. Deploy from this folder: netlify deploy --build --prod
+[build]
+  command = "node build.mjs"
+  publish = "public"
+  functions = "functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    Referrer-Policy = "no-referrer"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), screen-wake-lock=(self)"
+    Strict-Transport-Security = "max-age=31536000"
+    X-Robots-Tag = "noindex, nofollow"

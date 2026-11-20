@@ -1,0 +1,124 @@
+{% load hubtags %}<article class="card post" id="post-{{ post.pk }}">
+  <header class="post-head">
+    <a href="{{ post.author.get_absolute_url }}" tabindex="-1">{% include "hub/_avatar.html" with u=post.author %}</a>
+    <div class="post-meta">
+      <a class="name" href="{{ post.author.get_absolute_url }}">{{ post.author }}</a>
+      {% if post.community %}<span class="muted"> {% include "hub/_icon.html" with name="next" %} <a href="{{ post.community.get_absolute_url }}">{{ post.community }}</a></span>
+      {% elif post.audience_names %}<span class="muted"> {% include "hub/_icon.html" with name="next" %} {{ post.audience_names|first }}{% if post.audience_names|length > 1 %} +{{ post.audience_names|length|add:"-1" }}{% endif %}</span>{% endif %}
+      <div class="small muted">
+        {% if post.pinned_at %}{% include "hub/_icon.html" with name="pin" %} Pinned · {% endif %}
+        {% if post.is_draft %}<span class="pill grey">Draft</span>
+        {% elif post.is_scheduled %}<span class="pill orange">Scheduled for {{ post.created_at|date:"j M, H:i" }}</span>
+        {% else %}<a class="muted" href="{{ post.get_absolute_url }}"><time datetime="{{ post.created_at|date:'c' }}" title="{{ post.created_at|date:'j M Y, H:i' }}">{{ post.created_at|timesince }} ago</time></a>{% endif %}
+        {% if post.edited_at %} · Edited{% endif %}
+        {% if post.requires_ack %} · <span class="pill orange">Must read</span>{% endif %}
+      </div>
+    </div>
+    <details class="dropdown more">
+      <summary aria-label="Post options">{% include "hub/_icon.html" with name="more" %}</summary>
+      <div class="menu">
+        {% if post.body %}<button type="button" data-copy="#body-{{ post.pk }}">{% include "hub/_icon.html" with name="copy" %} Copy text</button>{% endif %}
+        {% if post.user_can_pin and post.is_live %}
+        <form method="post" action="{% url 'post_pin' post.pk %}" data-swap="#post-{{ post.pk }}">{% csrf_token %}{% if full %}<input type="hidden" name="full" value="1">{% endif %}<button>{% include "hub/_icon.html" with name="pin" %} {% if post.pinned_at %}Unpin{% else %}Pin to the top{% endif %}</button></form>
+        {% endif %}
+        {% if post.author_id != user.pk and post.is_live %}
+        <form method="post" action="{% url 'post_follow' post.pk %}" data-swap="#post-{{ post.pk }}">{% csrf_token %}{% if full %}<input type="hidden" name="full" value="1">{% endif %}<button>{% include "hub/_icon.html" with name="bell" %} {% if post.is_followed %}Turn off notifications{% else %}Turn on notifications{% endif %}</button></form>
+        {% endif %}
+        {% if post.author_id == user.pk %}<a href="{% url 'post_edit' post.pk %}">{% include "hub/_icon.html" with name="edit" %} Edit</a>{% endif %}
+        <a href="{{ post.get_absolute_url }}">{% include "hub/_icon.html" with name="link" %} Open</a>
+        {% if post.author_id == user.pk or perms.hub.delete_post %}
+        <hr><form method="post" action="{% url 'post_delete' post.pk %}" data-swap="#post-{{ post.pk }}" data-confirm="Delete this post?">{% csrf_token %}<button class="danger">{% include "hub/_icon.html" with name="trash" %} Delete</button></form>
+        {% endif %}
+        {% if post.author_id != user.pk %}
+        <hr><a class="danger" href="{% url 'report' 'post' post.pk %}">{% include "hub/_icon.html" with name="flag" %} Report post</a>
+        <a class="danger" href="{% url 'report' 'person' post.author_id %}">{% include "hub/_icon.html" with name="flag" %} Report {{ post.author.first_name|default:"user" }}</a>
+        {% endif %}
+      </div>
+    </details>
+  </header>
+
+  {% if post.kind == "news" %}
+    {% if post.cover %}<img class="post-cover" src="{{ post.cover.url }}" alt="" loading="lazy">{% endif %}
+    <h2 class="post-title"><a href="{{ post.get_absolute_url }}">{{ post.title }}</a></h2>
+  {% elif post.kind == "event" and post.event %}
+    <p class="post-body">{% if post.community %}New event in {{ post.community }}{% else %}New event for everyone{% endif %}</p>
+    <a class="event-card" href="{{ post.event.get_absolute_url }}">
+      <span class="date-badge" aria-hidden="true"><span>{{ post.event.starts_at|date:"M" }}</span><b>{{ post.event.starts_at|date:"j" }}</b></span>
+      <span class="event-info"><span class="event-title">{{ post.event.title }}</span><span class="small muted">{{ post.event.starts_at|date:"D j M, H:i" }}{% if post.event.location %} · {{ post.event.location }}{% endif %}</span></span>
+    </a>
+  {% endif %}
+
+  {% if post.body %}
+  <div class="post-body{% if not full %} clamp{% endif %}" id="body-{{ post.pk }}">{{ post.body_html }}</div>
+  {% if not full %}<button type="button" class="link show-more" data-show-more hidden>Show more</button>{% endif %}
+  {% if TRANSLATE_ENABLED %}<button type="button" class="link small muted" data-translate="{% url 'translate' 'post' post.pk %}">{% include "hub/_icon.html" with name="translate" %} See translation</button><div class="translation" hidden></div>{% endif %}
+  {% endif %}
+
+  {% with atts=post.attachments.all %}{% if atts %}
+  <div class="media-grid {% if atts|length > 1 %}multi{% else %}single{% endif %}">
+    {% for a in atts %}
+      {% if a.kind == "video" %}<video src="{{ a.file.url }}" controls preload="metadata" playsinline{% if a.alt_text %} aria-label="{{ a.alt_text }}"{% endif %}></video>
+      {% else %}<a href="{{ a.file.url }}" target="_blank" rel="noopener"><img src="{{ a.file.url }}" alt="{{ a.alt_text }}" loading="lazy"></a>{% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}{% endwith %}
+
+  {% if post.kind == "poll" %}
+  <div class="poll">
+    {% for option in post.poll_options %}
+      {% if post.poll_open and post.is_live %}
+      <form method="post" action="{% url 'poll_vote' post.pk %}" data-swap="#post-{{ post.pk }}">{% csrf_token %}{% if full %}<input type="hidden" name="full" value="1">{% endif %}
+        <input type="hidden" name="option" value="{{ option.pk }}">
+        <button class="poll-option{% if post.my_vote == option.pk %} mine{% endif %}" aria-pressed="{% if post.my_vote == option.pk %}true{% else %}false{% endif %}">
+          {% if post.show_results %}<i style="width: {{ option.percent }}%"></i>{% endif %}
+          <span>{{ option.text }}</span>{% if post.show_results %}<span>{{ option.percent }}%</span>{% endif %}
+        </button>
+      </form>
+      {% else %}
+      <div class="poll-option{% if post.my_vote == option.pk %} mine{% endif %}"><i style="width: {{ option.percent }}%"></i><span>{{ option.text }}</span><span>{{ option.percent }}%</span></div>
+      {% endif %}
+    {% endfor %}
+    <p class="small muted">{{ post.poll_total }} vote{{ post.poll_total|pluralize }}
+      {% if not post.poll_open %} · Closed{% elif post.poll_closes_at %} · Closes {{ post.poll_closes_at|date:"j M, H:i" }}{% endif %}
+      {% if post.my_vote and post.poll_open %} · Tap another answer to change your vote{% elif not post.show_results %} · Vote to see the results{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if post.requires_ack and not full and not post.is_acknowledged and post.author_id != user.pk %}
+  <p class="ack-box small"><b>Please read and confirm.</b> <a href="{{ post.get_absolute_url }}">Open it to confirm you've read it.</a></p>
+  {% endif %}
+
+  {% if post.is_live %}
+  <div class="tally">
+    {% if post.reaction_total %}<a href="{% url 'post_reactions' post.pk %}"><span class="emojis" aria-hidden="true">{{ post.reaction_emojis }}</span>{{ post.reaction_total }}<span class="sr-only"> reactions. See who reacted.</span></a>{% else %}<span></span>{% endif %}
+    {% if post.comment_total %}<a href="{{ post.get_absolute_url }}#comments">{{ post.comment_total }} comment{{ post.comment_total|pluralize }}</a>{% endif %}
+  </div>
+  <div class="post-actions">
+    <details class="dropdown react-picker">
+      <summary class="act{% if post.my_reaction %} on{% endif %}">{% if post.my_reaction %}{{ REACTION_EMOJI|lookup:post.my_reaction }} {{ REACTION_LABELS|lookup:post.my_reaction }}{% else %}{% include "hub/_icon.html" with name="like" %} Like{% endif %}</summary>
+      <div class="menu" role="group" aria-label="React">
+        {% for kind, label in REACTION_CHOICES %}
+        <form method="post" action="{% url 'react' post.pk %}" data-swap="#post-{{ post.pk }}">{% csrf_token %}{% if full %}<input type="hidden" name="full" value="1">{% endif %}<input type="hidden" name="kind" value="{{ kind }}">
+          <button class="{% if post.my_reaction == kind %}on{% endif %}" title="{{ label }}" aria-label="{{ label }}" aria-pressed="{% if post.my_reaction == kind %}true{% else %}false{% endif %}">{{ REACTION_EMOJI|lookup:kind }}</button>
+        </form>
+        {% endfor %}
+      </div>
+    </details>
+    <a class="act" href="{{ post.get_absolute_url }}#comment-input-{{ post.pk }}" data-focus="#comment-input-{{ post.pk }}">{% include "hub/_icon.html" with name="comment" %} Comment</a>
+  </div>
+
+  <div class="comments" id="comments">
+    {% if not full and post.comment_list|length > 2 %}<a class="small muted" href="{{ post.get_absolute_url }}#comments">View all {{ post.comment_total }} comments</a>{% endif %}
+    {% if full %}{% for c in post.comment_list %}{% include "hub/_comment.html" %}{% endfor %}
+    {% else %}{% for c in post.comment_list|slice:"-2:" %}{% include "hub/_comment.html" %}{% endfor %}{% endif %}
+    <form class="comment-form" method="post" action="{% url 'comment_create' post.pk %}" enctype="multipart/form-data" data-swap="#post-{{ post.pk }}">
+      {% csrf_token %}{% if full %}<input type="hidden" name="full" value="1">{% endif %}<input type="hidden" name="parent" value="">
+      {% include "hub/_avatar.html" with u=user size=32 %}
+      <label class="sr-only" for="comment-input-{{ post.pk }}">Write a comment</label>
+      <input id="comment-input-{{ post.pk }}" name="body" placeholder="Share your thoughts…" maxlength="2000" autocomplete="off" data-mentions>
+      <label class="icon-btn file-btn" title="Add a picture or GIF">{% include "hub/_icon.html" with name="photo" %}<span class="sr-only">Add a picture or GIF</span><input class="sr-only" type="file" name="image" accept="image/*"></label>
+      <button class="icon-btn" aria-label="Send">{% include "hub/_icon.html" with name="send" %}</button>
+    </form>
+  </div>
+  {% endif %}
+</article>

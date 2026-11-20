@@ -1,0 +1,59 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}{{ title }} · Chat · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'chat/chat.css' %}">
+<script src="{% static 'chat/chat.js' %}" defer></script>
+{% endblock %}
+{% block main_class %}page chat-page{% endblock %}
+{% block content %}
+<div class="narrow">
+  <section class="card chat">
+    <header class="chat-head">
+      <a class="back" href="{% url 'chat:list' %}" aria-label="Back to all chats">{% include "hub/_icon.html" with name="back" %}Chat</a>
+      {% if other %}{% include "hub/_avatar.html" with u=other size=36 %}
+      {% else %}<span class="group-mark" aria-hidden="true">{% include "hub/_icon.html" with name="groups" %}</span>{% endif %}
+      <h1>{{ title }}{% if membership.muted %} <span class="pill grey">Muted</span>{% endif %}</h1>
+      <details class="dropdown more">
+        <summary aria-label="Chat options">{% include "hub/_icon.html" with name="more" %}</summary>
+        <div class="menu">
+          <form method="post" action="{% url 'chat:mute' conversation.pk %}">{% csrf_token %}
+            <button>{% if membership.muted %}{% include "hub/_icon.html" with name="bell" %} Unmute{% else %}{% include "hub/_icon.html" with name="bell-off" %} Mute{% endif %}</button>
+          </form>
+          {% if conversation.is_group %}
+          <a href="{% url 'chat:members' conversation.pk %}">{% include "hub/_icon.html" with name="groups" %} Members</a>
+          <hr>
+          <form method="post" action="{% url 'chat:leave' conversation.pk %}" data-confirm="Leave this group chat? You will no longer see its messages.">{% csrf_token %}
+            <button class="danger">{% include "hub/_icon.html" with name="logout" %} Leave group</button>
+          </form>
+          {% elif other %}
+          <a href="{{ other.get_absolute_url }}">{% include "hub/_icon.html" with name="people" %} View profile</a>
+          {% endif %}
+        </div>
+      </details>
+    </header>
+
+    <div class="chat-log" role="log" aria-label="Messages" tabindex="0" data-poll-url="{% url 'chat:poll' conversation.pk %}" data-last-id="{{ last_id }}">
+      {% if earlier %}<p class="chat-earlier"><a class="btn small" href="?before={{ earlier }}">Earlier messages</a></p>{% endif %}
+      {% if not msgs %}<p class="empty" data-chat-empty><span class="empty-title">No messages yet</span>Say hello.</p>{% endif %}
+      {% include "chat/_messages.html" %}
+    </div>
+
+    {% if older_page %}
+    <p class="chat-earlier"><a class="btn small" href="{{ conversation.get_absolute_url }}">Latest messages</a></p>
+    {% else %}
+    <form class="chat-composer" method="post" action="{% url 'chat:send' conversation.pk %}" enctype="multipart/form-data">
+      {% csrf_token %}
+      <label class="icon-btn file-btn" title="Add a picture">
+        <input class="sr-only" type="file" name="image" accept="image/*">
+        {% include "hub/_icon.html" with name="photo" %}<span class="sr-only">Add a picture</span>
+      </label>
+      <label class="sr-only" for="chat-body">Message</label>
+      <textarea id="chat-body" name="body" rows="1" maxlength="{{ max_body }}" placeholder="Message"></textarea>
+      <button class="icon-btn chat-send" aria-label="Send" title="Send">{% include "hub/_icon.html" with name="send" %}</button>
+      <p class="chat-file small muted" data-file-name hidden></p>
+    </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

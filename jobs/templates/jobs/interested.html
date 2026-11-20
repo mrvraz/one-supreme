@@ -1,0 +1,28 @@
+{% extends "hub/base.html" %}
+{% block title %}Interested in {{ vacancy.title }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{{ vacancy.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}{{ vacancy.title }}</a>
+  <div class="page-head"><h1>Interested colleagues</h1></div>
+  <p class="small muted">{% include "hub/_icon.html" with name="lock" %} Private. Only the recruiter, the person who added the vacancy and the people who manage vacancies can see this list.</p>
+  <div class="card list">
+    {% for interest in interests %}
+    {% with person=interest.user %}
+    <div class="row">
+      {% include "hub/_avatar.html" with u=person size=40 %}
+      <div class="row-body">
+        <a class="row-title" href="{{ person.get_absolute_url }}">{{ person }}</a>
+        <span class="row-sub">{% if person.job_title %}{{ person.job_title }} · {% endif %}{{ interest.created_at|date:"j M Y" }}</span>
+        {% if interest.note %}<span class="row-sub">{{ interest.note|linebreaksbr }}</span>{% endif %}
+      </div>
+      {# "as" keeps this page working if chat has no "with" page: the link is then left out. #}
+      {% url 'chat:with' person.pk as chat_url %}
+      {% if chat_url %}<div class="row-side"><a class="btn small" href="{{ chat_url }}">Message</a></div>{% endif %}
+    </div>
+    {% endwith %}
+    {% empty %}
+    <div class="empty"><span class="empty-title">No one yet</span>Colleagues who say they're interested will appear here.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

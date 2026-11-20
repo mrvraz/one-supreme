@@ -1,0 +1,46 @@
+{% extends "hub/base.html" %}{% load hubtags %}
+{% block content %}
+<div class="layout">
+  <div class="column">
+    <h1 class="sr-only">Feed</h1>
+    {% include "hub/_composer.html" %}
+    {# One row: whose posts, what kind, and the order. A chip turns blue when it isn't on its default. #}
+    <div class="filters" aria-label="Filter the feed">
+      <details class="dropdown">
+        <summary class="chip{% if scope != 'all' %} on{% endif %}"><span class="sr-only">Show posts from: </span>{{ scopes|lookup:scope }}{% include "hub/_icon.html" with name="down" %}</summary>
+        <div class="menu left">{% for key, label in scopes.items %}<a href="?{% query scope=key page=None %}"{% if key == scope %} aria-current="true"{% endif %}>{{ label }}{% if key == scope %}{% include "hub/_icon.html" with name="check" %}{% endif %}</a>{% endfor %}</div>
+      </details>
+      <details class="dropdown">
+        <summary class="chip{% if kind %} on{% endif %}"><span class="sr-only">Type: </span>{{ kinds|lookup:kind }}{% include "hub/_icon.html" with name="down" %}</summary>
+        <div class="menu left">{% for key, label in kinds.items %}<a href="?{% if key %}{% query type=key page=None %}{% else %}{% query type=None page=None %}{% endif %}"{% if key == kind %} aria-current="true"{% endif %}>{{ label }}{% if key == kind %}{% include "hub/_icon.html" with name="check" %}{% endif %}</a>{% endfor %}</div>
+      </details>
+      <details class="dropdown">
+        <summary class="chip{% if sort != 'new' %} on{% endif %}" title="Order: {{ sorts|lookup:sort|first }}">{% include "hub/_icon.html" with name="sort" %}<span class="sr-only">Order: {{ sorts|lookup:sort|first }}</span></summary>
+        <div class="menu left">{% for key, item in sorts.items %}<a href="?{% query sort=key page=None %}"{% if key == sort %} aria-current="true"{% endif %}>{{ item.0 }}{% if key == sort %}{% include "hub/_icon.html" with name="check" %}{% endif %}</a>{% endfor %}</div>
+      </details>
+    </div>
+    {% if birthdays_today and page.number == 1 %}
+    <a class="card row" href="{% url 'birthdays' %}"><span class="row-icon">{% include "hub/_icon.html" with name="cake" %}</span><span class="row-body"><span class="row-title">Birthday{{ birthdays_today|length|pluralize }} today</span><span class="row-sub">{{ birthdays_today|join:", " }}</span></span><span class="chevron"></span></a>
+    {% endif %}
+    {% for post in pinned %}{% include "hub/_post.html" %}{% endfor %}
+    {% for post in posts %}{% include "hub/_post.html" %}
+    {% empty %}{% if not pinned %}<div class="card empty"><span class="empty-title">Nothing here yet</span>Be the first to say hello, or change the filters above.</div>{% endif %}
+    {% endfor %}
+    {% include "hub/_pager.html" %}
+  </div>
+  <aside class="sidebar">
+    <section class="card">
+      <h2>Coming up</h2>
+      {% for event in upcoming %}{% include "hub/_event_row.html" with compact=True %}
+      {% empty %}<p class="muted small">No events planned.</p>{% endfor %}
+      <p class="small"><a href="{% url 'events' %}">All events</a> · <a href="{% url 'event_create' %}">Create an event</a></p>
+    </section>
+    <section class="card">
+      <h2>Your groups</h2>
+      {% for group in my_groups %}<a class="side-link" href="{{ group.get_absolute_url }}">{{ group }}</a>
+      {% empty %}<p class="muted small">You haven't joined any groups yet.</p>{% endfor %}
+      <p class="small"><a href="{% url 'communities' %}?show=all">Find groups</a></p>
+    </section>
+  </aside>
+</div>
+{% endblock %}

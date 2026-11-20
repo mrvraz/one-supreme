@@ -1,0 +1,43 @@
+{% extends "hub/base.html" %}
+{% block title %}Members of {{ group }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{{ group.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}{{ group }}</a>
+  <h1>Members</h1>
+  {% include "hub/_group_tabs.html" with tab="members" %}
+  {% if is_admin %}
+    {% if requests %}
+    <h2 class="section-title">Asking to join</h2>
+    <div class="card list">{% for invite in requests %}
+      <div class="row">{% include "hub/_avatar.html" with u=invite.user size=36 %}<span class="row-body"><span class="row-title">{{ invite.user }}</span><span class="row-sub">{{ invite.user.job_title }}</span></span>
+        <form class="row-side" method="post" action="{% url 'invite_answer' invite.pk %}">{% csrf_token %}<button class="btn small primary" name="answer" value="accept">Approve</button><button class="btn small" name="answer" value="decline">Decline</button></form></div>
+    {% endfor %}</div>
+    {% endif %}
+    <h2 class="section-title">{% if group.is_unit %}Add people{% else %}Invite colleagues{% endif %}</h2>
+    <form class="search" method="get" role="search"><label class="sr-only" for="q">Find a colleague</label><input id="q" name="q" value="{{ q }}" placeholder="Type a name" type="search"><button class="btn">Find</button></form>
+    {% if found %}<div class="card list" style="margin-top: 10px">{% for person in found %}
+      <div class="row">{% include "hub/_avatar.html" with u=person size=36 %}<span class="row-body"><span class="row-title">{{ person }}</span><span class="row-sub">{{ person.job_title }}</span></span>
+        <form class="row-side" method="post" action="{% url 'community_invite' group.slug %}">{% csrf_token %}<input type="hidden" name="user" value="{{ person.pk }}"><button class="btn small primary">{% if group.is_unit %}Add{% else %}Invite{% endif %}</button></form></div>
+    {% endfor %}</div>{% elif q %}<p class="muted small">Nobody found who isn't already a member.</p>{% endif %}
+    {% if invited %}<p class="small muted" style="margin-top: 10px">Invited, waiting for an answer: {{ invited|join:", " }}</p>{% endif %}
+  {% endif %}
+  <h2 class="section-title">{{ page.paginator.count }} member{{ page.paginator.count|pluralize }}</h2>
+  <div class="card list">
+    {% for person in page %}
+    <div class="row">
+      <a href="{{ person.get_absolute_url }}" tabindex="-1">{% include "hub/_avatar.html" with u=person size=36 %}</a>
+      <a class="row-body" href="{{ person.get_absolute_url }}"><span class="row-title">{{ person }}</span><span class="row-sub">{{ person.job_title }}</span></a>
+      <span class="row-side">{% if person.pk in admin_ids %}<span class="pill">Admin</span>{% endif %}
+        {% if is_admin and person != user %}
+        <details class="dropdown more"><summary aria-label="Options for {{ person }}">{% include "hub/_icon.html" with name="more" %}</summary><div class="menu">
+          <form method="post" action="{% url 'community_member_change' group.slug person.pk %}">{% csrf_token %}
+            {% if person.pk in admin_ids %}<button name="action" value="unadmin">Remove as admin</button>{% else %}<button name="action" value="admin">Make admin</button>{% endif %}
+            <button class="danger" name="action" value="remove">Remove from {{ group.is_unit|yesno:"unit,group" }}</button>
+          </form></div></details>
+        {% endif %}</span>
+    </div>
+    {% empty %}<p class="empty">No members yet.</p>{% endfor %}
+  </div>
+  {% include "hub/_pager.html" %}
+</div>
+{% endblock %}

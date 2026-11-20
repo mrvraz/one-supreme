@@ -1,0 +1,8 @@
+<div class="toolbar" role="toolbar" aria-label="Text formatting">
+  <button type="button" data-wrap="**" data-target="{{ target }}" title="Bold" aria-label="Bold">{% include "hub/_icon.html" with name="bold" %}</button>
+  <button type="button" data-wrap="*" data-target="{{ target }}" title="Italic" aria-label="Italic">{% include "hub/_icon.html" with name="italic" %}</button>
+  <button type="button" data-wrap="~~" data-target="{{ target }}" title="Strikethrough" aria-label="Strikethrough">{% include "hub/_icon.html" with name="strike" %}</button>
+  <button type="button" data-prefix="- " data-target="{{ target }}" title="Bulleted list" aria-label="Bulleted list">{% include "hub/_icon.html" with name="list" %}</button>
+  <button type="button" data-prefix="1. " data-target="{{ target }}" title="Numbered list" aria-label="Numbered list">{% include "hub/_icon.html" with name="list-ordered" %}</button>
+  <span class="small muted">Type @ and a name to mention someone</span>
+</div>

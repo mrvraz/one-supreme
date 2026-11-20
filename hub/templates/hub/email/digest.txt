@@ -1,0 +1,11 @@
+{% autoescape off %}Hi {{ user.first_name|default:user }},
+
+Here's what happened on {{ SITE_NAME }} since your last summary:
+{% for n in items %}
+- {{ n.message }}
+  {{ SITE_URL }}{{ n.url }}{% endfor %}
+
+See everything: {{ SITE_URL }}/notifications/
+
+You can turn these emails off on your profile: {{ SITE_URL }}/me/edit/
+{% endautoescape %}

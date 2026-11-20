@@ -1,0 +1,15 @@
+{% extends "hub/base.html" %}{% load hubtags %}
+{% block title %}What's new · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'about' %}">{% include "hub/_icon.html" with name="back" %}About</a>
+  <h1>What's new</h1>
+  {% for note in notes %}
+  <article class="card">
+    <h2>{{ note.title }} {% if note.is_new %}<span class="pill green">New</span>{% endif %}</h2>
+    <p class="small muted">{{ note.published_at|date:"j F Y" }}</p>
+    <div class="post-body">{{ note.body|rich }}</div>
+  </article>
+  {% empty %}<div class="card empty">Nothing new yet.</div>{% endfor %}
+</div>
+{% endblock %}

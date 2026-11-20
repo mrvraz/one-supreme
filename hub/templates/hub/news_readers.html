@@ -1,0 +1,13 @@
+{% extends "hub/base.html" %}
+{% block title %}Who has confirmed · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{{ post.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}Back to the news</a>
+  <h1>Who has confirmed</h1>
+  <p class="muted">{{ post.title }}: {{ done|length }} confirmed, {{ waiting|length }} still to confirm.</p>
+  <h2 class="section-title">Still to confirm ({{ waiting|length }})</h2>
+  <div class="card list">{% for person in waiting %}<a class="row" href="{{ person.get_absolute_url }}">{% include "hub/_avatar.html" with u=person size=36 %}<span class="row-body"><span class="row-title">{{ person }}</span><span class="row-sub">{{ person.job_title }}</span></span></a>{% empty %}<p class="empty">Everyone has confirmed.</p>{% endfor %}</div>
+  <h2 class="section-title">Confirmed ({{ done|length }})</h2>
+  <div class="card list">{% for person, when in done %}<a class="row" href="{{ person.get_absolute_url }}">{% include "hub/_avatar.html" with u=person size=36 %}<span class="row-body"><span class="row-title">{{ person }}</span><span class="row-sub">{{ when|date:"j M, H:i" }}</span></span></a>{% empty %}<p class="empty">Nobody yet.</p>{% endfor %}</div>
+</div>
+{% endblock %}

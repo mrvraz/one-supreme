@@ -1,0 +1,65 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}New chat · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'chat/chat.css' %}">{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'chat:list' %}">{% include "hub/_icon.html" with name="back" %}Chat</a>
+  <div class="page-head"><h1>New chat</h1></div>
+  <div class="chips">
+    <a class="chip{% if not group %} on{% endif %}" href="{% url 'chat:new' %}"{% if not group %} aria-current="true"{% endif %}>{% include "hub/_icon.html" with name="people" %} One colleague</a>
+    <a class="chip{% if group %} on{% endif %}" href="{% url 'chat:new' %}?group=1"{% if group %} aria-current="true"{% endif %}>{% include "hub/_icon.html" with name="groups" %} New group chat</a>
+  </div>
+
+  {% if not group %}
+  <form class="search" method="get" role="search">
+    <label class="sr-only" for="q">Search colleagues by name</label>
+    <input id="q" name="q" value="{{ q }}" placeholder="Search by name" type="search">
+    <button class="btn">Search</button>
+  </form>
+  <h2 class="section-title">Who do you want to message?</h2>
+  <div class="card list">
+    {% for person in people %}
+    <a class="row" href="{% url 'chat:with' person.pk %}">
+      {% include "hub/_avatar.html" with u=person size=40 %}
+      <span class="row-body"><span class="row-title">{{ person }}</span>{% if person.job_title %}<span class="row-sub">{{ person.job_title }}</span>{% endif %}</span>
+      <span class="row-side chevron"></span>
+    </a>
+    {% empty %}
+    <p class="empty">{% if q %}No one matches “{{ q }}”.{% else %}No colleagues to message yet.{% endif %}</p>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <form class="card" method="post">
+    {% csrf_token %}
+    {% if error %}<p class="msg error" role="alert">{{ error }}</p>{% endif %}
+    <div class="field">
+      <label for="q">Find colleagues</label>
+      <div class="search">
+        <input id="q" name="q" value="{{ q }}" placeholder="Search by name" type="search">
+        {# First button in the form, so pressing Enter searches. It never creates the chat by accident. #}
+        <button class="btn" name="search" value="1" formnovalidate>Search</button>
+      </div>
+      <p class="small muted">Tick at least 2 people. Your ticks are kept when you search again.</p>
+    </div>
+    <div class="list chat-picker">
+      {% for person, ticked in choices %}
+      <label class="row">
+        <input type="checkbox" name="members" value="{{ person.pk }}"{% if ticked %} checked{% endif %}>
+        {% include "hub/_avatar.html" with u=person size=36 %}
+        <span class="row-body"><span class="row-title">{{ person }}</span>{% if person.job_title %}<span class="row-sub">{{ person.job_title }}</span>{% endif %}</span>
+      </label>
+      {% empty %}
+      <p class="empty">{% if q %}No one matches “{{ q }}”.{% else %}No colleagues to add yet.{% endif %}</p>
+      {% endfor %}
+    </div>
+    <div class="field">
+      <label for="name">Group name</label>
+      <input id="name" name="name" value="{{ name }}" maxlength="80" required placeholder="For example: Night shift">
+    </div>
+    <div class="actions"><a class="btn" href="{% url 'chat:list' %}">Cancel</a> <button class="btn primary" name="create" value="1">Create group chat</button></div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

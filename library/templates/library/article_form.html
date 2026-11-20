@@ -1,0 +1,12 @@
+{% extends "hub/base.html" %}
+{% block title %}{% if article %}Edit article{% else %}New article{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <form class="card" method="post">
+    {% csrf_token %}
+    <h1>{% if article %}Edit article{% else %}New article{% endif %}</h1>
+    {% include "hub/_form_fields.html" %}
+    <div class="actions"><a class="btn" href="{% if article %}{{ article.get_absolute_url }}{% else %}{% url 'library:kb' %}{% endif %}">Cancel</a> <button class="btn primary">{% if article %}Save changes{% else %}Publish article{% endif %}</button></div>
+  </form>
+</div>
+{% endblock %}

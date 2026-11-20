@@ -1,0 +1,52 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}Members · {{ conversation.name }} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'chat/chat.css' %}">{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'chat:thread' conversation.pk %}">{% include "hub/_icon.html" with name="back" %}{{ conversation.name }}</a>
+  <div class="page-head"><h1>Members</h1></div>
+  <div class="card list">
+    {% for m in memberships %}
+    <div class="row">
+      {% include "hub/_avatar.html" with u=m.user size=40 %}
+      <span class="row-body">
+        <a class="row-title" href="{{ m.user.get_absolute_url }}">{{ m.user }}</a>
+        {% if m.user.job_title %}<span class="row-sub">{{ m.user.job_title }}</span>{% endif %}
+      </span>
+      <span class="row-side">
+        {% if m.user_id == manager_id %}<span class="pill">Manages this chat</span>{% endif %}
+        {% if is_manager and m.user_id != user.pk %}
+        <form method="post" data-confirm="Remove {{ m.user }} from this group chat?">{% csrf_token %}<button class="btn small danger" name="remove" value="{{ m.user_id }}">Remove</button></form>
+        {% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if is_manager %}
+  <h2 class="section-title">Add people</h2>
+  <form class="search" method="get" role="search">
+    <label class="sr-only" for="q">Search colleagues by name</label>
+    <input id="q" name="q" value="{{ q }}" placeholder="Search by name" type="search">
+    <button class="btn">Search</button>
+  </form>
+  {% if q %}
+  <form class="card list chat-found" method="post">
+    {% csrf_token %}
+    {% for person in found %}
+    <div class="row">
+      {% include "hub/_avatar.html" with u=person size=40 %}
+      <span class="row-body"><span class="row-title">{{ person }}</span>{% if person.job_title %}<span class="row-sub">{{ person.job_title }}</span>{% endif %}</span>
+      <span class="row-side"><button class="btn small" name="add" value="{{ person.pk }}">Add<span class="sr-only"> {{ person }}</span></button></span>
+    </div>
+    {% empty %}
+    <p class="empty">No one else matches “{{ q }}”.</p>
+    {% endfor %}
+  </form>
+  {% endif %}
+  {% else %}
+  <p class="small muted">Only the person who manages this chat can add or remove people. If they leave the chat or the company, the longest-standing member takes over. People who are added see messages from the moment they join. You can leave from the chat's menu.</p>
+  {% endif %}
+</div>
+{% endblock %}

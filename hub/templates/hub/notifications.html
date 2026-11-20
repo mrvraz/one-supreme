@@ -1,0 +1,39 @@
+{% extends "hub/base.html" %}
+{% block title %}Notifications · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <div class="page-head">
+    <h1>Notifications</h1>
+    <div class="actions">
+      <form method="post" action="{% url 'notifications_read_all' %}">{% csrf_token %}<button class="btn small">Mark all as read</button></form>
+      <a class="icon-btn" href="{% url 'settings_notifications' %}" aria-label="Notification settings">{% include "hub/_icon.html" with name="gear" %}</a>
+    </div>
+  </div>
+  <div class="chips">
+    <a class="chip{% if show == 'all' %} on{% endif %}" href="?">All</a>
+    <a class="chip{% if show == 'unread' %} on{% endif %}" href="?show=unread">Unread</a>
+  </div>
+  {% if user.dnd_on %}<p class="msg">Do not disturb is on: no push or email until you turn it off in the Menu.</p>{% endif %}
+  <div class="card list">
+    {% for n in page %}
+    <div class="notification{% if not n.read_at %} unread{% endif %}">
+      {% if n.actor %}{% include "hub/_avatar.html" with u=n.actor size=40 %}{% else %}<span class="row-icon">{% include "hub/_icon.html" with name="bell" %}</span>{% endif %}
+      <div class="row-body">
+        <a href="{% url 'notification_open' n.pk %}" style="color: inherit">{{ n.message }}</a><br>
+        <span class="small muted">{{ n.created_at|timesince }} ago</span>
+        {% if n.invite and n.invite.answered_at is None %}
+          {% if n.invite.kind == "invite" and n.invite.user_id == user.pk or n.invite.kind == "request" %}
+          <form class="actions" method="post" action="{% url 'invite_answer' n.invite.pk %}">{% csrf_token %}
+            <button class="btn small primary" name="answer" value="accept">{% if n.invite.kind == "request" %}Approve{% else %}Accept{% endif %}</button>
+            <button class="btn small" name="answer" value="decline">Decline</button></form>
+          {% endif %}
+        {% elif n.invite %}<p class="small muted">{% if n.invite.accepted %}Accepted{% else %}Declined{% endif %}</p>{% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <p class="empty"><span class="empty-title">{% if show == "unread" %}All caught up{% else %}Nothing yet{% endif %}</span>When colleagues comment, react, mention you or invite you, you'll see it here.</p>
+    {% endfor %}
+  </div>
+  {% include "hub/_pager.html" %}
+</div>
+{% endblock %}

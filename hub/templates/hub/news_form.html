@@ -1,0 +1,22 @@
+{% extends "hub/base.html" %}
+{% block title %}{% if post %}Edit news{% else %}Write news{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'news' %}">{% include "hub/_icon.html" with name="back" %}News</a>
+  <form class="card" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <h1>{% if post %}Edit news{% else %}Write news{% endif %}</h1>
+    {% if form.non_field_errors %}<div class="msg error">{{ form.non_field_errors }}</div>{% endif %}
+    <div class="field"><label for="{{ form.title.id_for_label }}">Title</label>{{ form.title }}{{ form.title.errors }}</div>
+    <div class="field"><label for="{{ form.cover.id_for_label }}">{{ form.cover.label }}</label>{% if post.cover %}<p class="small muted">Current: <a href="{{ post.cover.url }}">picture</a></p>{% endif %}{{ form.cover }}{{ form.cover.errors }}</div>
+    <div class="field"><label for="{{ form.body.id_for_label }}">Text</label>{% include "hub/_toolbar.html" with target=form.body.id_for_label %}{{ form.body }}{{ form.body.errors }}</div>
+    <fieldset class="field" style="border: 0; padding: 0"><legend><b>{{ form.audiences.label }}</b></legend><div class="scroll-box">{{ form.audiences }}</div>{{ form.audiences.errors }}</fieldset>
+    <label class="switch"><span>{{ form.requires_ack.label }}<br><span class="small muted">Readers get a button to confirm, and you see who has.</span></span>{{ form.requires_ack }}</label>
+    {% if not post or not post.is_live %}<div class="field"><label for="{{ form.publish_at.id_for_label }}">{{ form.publish_at.label }}</label>{{ form.publish_at }}{{ form.publish_at.errors }}</div>{% endif %}
+    <div class="actions">
+      {% if not post or not post.is_live %}<button class="btn" name="draft" value="1">Save draft</button>{% endif %}
+      <button class="btn primary">{% if post and post.is_live %}Save changes{% else %}Publish{% endif %}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

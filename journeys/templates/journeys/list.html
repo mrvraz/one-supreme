@@ -1,0 +1,55 @@
+{% extends "hub/base.html" %}
+{% load static %}
+{% block title %}Journeys · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'journeys/journeys.css' %}">{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Journeys</h1>
+  {% if perms.journeys.add_journey %}<a class="btn primary" href="{% url 'journeys:new' %}">{% include "hub/_icon.html" with name="plus" %} New journey</a>{% endif %}
+</div>
+<nav class="chips" aria-label="Show">
+  {% for value, label in filters %}<a class="chip{% if show == value %} on{% endif %}" href="?show={{ value }}"{% if show == value %} aria-current="true"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+
+{% if assignments %}
+<div class="journey-grid">
+  {% for a in assignments %}
+  <article class="card journey-card">
+    {% if a.journey.cover %}<img class="post-cover" src="{{ a.journey.cover.url }}" alt="" loading="lazy">{% endif %}
+    <h2><a href="{{ a.journey.get_absolute_url }}">{{ a.journey.title }}</a></h2>
+    <p class="small muted">Assigned to you on {{ a.assigned_at|date:"j F Y" }}</p>
+    <div class="progress" aria-hidden="true"><i style="width: {{ a.percent }}%"></i></div>
+    <p class="small muted">{{ a.done }} of {{ a.total }} steps{% if a.completed_at %} · <span class="read-tick">Completed</span>{% endif %}</p>
+    <a class="btn wide{% if not a.completed_at %} primary{% endif %}" href="{{ a.journey.get_absolute_url }}">{% if a.completed_at %}Review{% elif a.done %}Continue{% else %}Start{% endif %}</a>
+  </article>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="empty">
+    {% if show == "completed" %}<span class="empty-title">Nothing completed yet</span>Journeys you finish will show here.
+    {% elif show == "incomplete" %}<span class="empty-title">All done</span>You have no journeys left to finish.
+    {% else %}<span class="empty-title">No journeys yet</span>When a journey is given to you, it will show here.{% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% if editor %}
+<h2 class="section-title">Manage journeys</h2>
+<div class="card list">
+  {% for journey in manage %}
+  <a class="row" href="{{ journey.get_absolute_url }}">
+    <span class="row-icon">{% include "hub/_icon.html" with name="map" %}</span>
+    <span class="row-body">
+      <span class="row-title">{{ journey.title }}</span>
+      <span class="row-sub">{{ journey.step_count }} step{{ journey.step_count|pluralize }}</span>
+    </span>
+    <span class="row-side">{% if journey.is_published %}<span class="pill green">Published</span>{% else %}<span class="pill orange">Draft</span>{% endif %}</span>
+  </a>
+  {% empty %}
+  <div class="empty"><span class="empty-title">No journeys yet</span>Create the first one with “New journey”.</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

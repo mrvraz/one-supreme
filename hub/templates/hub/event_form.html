@@ -1,0 +1,12 @@
+{% extends "hub/base.html" %}
+{% block title %}{% if event %}Edit event{% else %}Create an event{% endif %} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <form class="card" method="post">
+    {% csrf_token %}
+    <h1>{% if event %}Edit event{% else %}Create an event{% endif %}</h1>
+    {% include "hub/_form_fields.html" %}
+    <div class="actions"><a class="btn" href="{% if event %}{{ event.get_absolute_url }}{% else %}{% url 'events' %}{% endif %}">Cancel</a> <button class="btn primary">{% if event %}Save changes{% else %}Create event{% endif %}</button></div>
+  </form>
+</div>
+{% endblock %}

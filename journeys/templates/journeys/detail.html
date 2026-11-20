@@ -1,0 +1,59 @@
+{% extends "hub/base.html" %}
+{% load static hubtags %}
+{% block title %}{{ journey.title }} · {{ SITE_NAME }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'journeys/journeys.css' %}">{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'journeys:list' %}">{% include "hub/_icon.html" with name="back" %}Journeys</a>
+  <article class="card journey-card">
+    {% if journey.cover %}<img class="post-cover" src="{{ journey.cover.url }}" alt="">{% endif %}
+    <h1>{{ journey.title }}</h1>
+    {% if editor %}
+    <p class="small muted">
+      {% if journey.is_published %}<span class="pill green">Published</span>{% else %}<span class="pill orange">Draft</span>{% endif %}
+      For {% for group in journey.audiences.all %}{{ group }}{% if not forloop.last %}, {% endif %}{% empty %}everyone{% endfor %}
+    </p>
+    {% endif %}
+    {% if journey.description %}<div class="post-body">{{ journey.description|rich }}</div>{% endif %}
+
+    {% if assignment %}
+    <div class="progress" aria-hidden="true"><i style="width: {{ percent }}%"></i></div>
+    <p class="small muted">{{ done }} of {{ steps|length }} steps{% if assignment.completed_at %} · <span class="read-tick">Completed on {{ assignment.completed_at|date:"j F Y" }}</span>{% endif %}</p>
+    {% if next_step %}<a class="btn primary" href="{% url 'journeys:step' journey.pk next_step.pk %}">{% if done %}Continue{% else %}Start{% endif %}</a>{% endif %}
+    {% endif %}
+
+    {% if editor %}
+    <div class="actions">
+      <a class="btn" href="{% url 'journeys:progress' journey.pk %}">{% include "hub/_icon.html" with name="chart" %} Progress</a>
+      <a class="btn" href="{% url 'journeys:edit' journey.pk %}">Edit</a>
+      <a class="btn" href="{% url 'journeys:step_new' journey.pk %}">Add a step</a>
+      <form method="post" action="{% url 'journeys:publish' journey.pk %}"{% if journey.is_published %} data-confirm="Unpublish this journey? People will not see it until you publish it again."{% endif %}>{% csrf_token %}<input type="hidden" name="publish" value="{% if journey.is_published %}0{% else %}1{% endif %}"><button class="btn{% if not journey.is_published %} primary{% endif %}">{% if journey.is_published %}Unpublish{% else %}Publish{% endif %}</button></form>
+      {% if perms.journeys.delete_journey %}<form method="post" action="{% url 'journeys:delete' journey.pk %}" data-confirm="Delete this journey and everyone's progress in it? This cannot be undone.">{% csrf_token %}<button class="btn danger">Delete</button></form>{% endif %}
+    </div>
+    {% endif %}
+  </article>
+
+  <h2 class="section-title">Steps</h2>
+  <div class="card list">
+    {% for step in steps %}
+    <div class="row">
+      {% if step.is_done %}<span class="row-icon done">{% include "hub/_icon.html" with name="check" %}<span class="sr-only">Done</span></span>
+      {% elif assignment and not step.is_open %}<span class="row-icon locked">{% include "hub/_icon.html" with name="lock" %}<span class="sr-only">Locked</span></span>
+      {% else %}<span class="row-icon" aria-hidden="true">{{ step.number }}</span>{% endif %}
+      <span class="row-body">
+        {% if step.is_open or editor %}<a class="row-title" href="{% url 'journeys:step' journey.pk step.pk %}">{{ step.title }}</a>{% else %}<span class="row-title">{{ step.title }}</span>{% endif %}
+        {% if assignment %}<span class="row-sub">{% if step.is_done %}Done{% elif step.is_open %}Ready for you{% else %}Opens when you finish the steps before it{% endif %}</span>{% endif %}
+      </span>
+      {% if editor %}
+      <span class="row-side">
+        <a class="btn small" href="{% url 'journeys:step_edit' journey.pk step.pk %}">Edit</a>
+        <form method="post" action="{% url 'journeys:step_delete' journey.pk step.pk %}" data-confirm="Delete this step?">{% csrf_token %}<button class="btn small danger">Delete</button></form>
+      </span>
+      {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty"><span class="empty-title">No steps yet</span>{% if editor %}Add the first step, then publish.{% else %}Steps will show here soon.{% endif %}</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

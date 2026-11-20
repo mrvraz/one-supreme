@@ -1,0 +1,59 @@
+{% extends "hub/base.html" %}
+{% load hubtags %}
+{% block title %}{{ vacancy.title }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'jobs:list' %}">{% include "hub/_icon.html" with name="back" %}All jobs</a>
+  <article class="card">
+    {% if not vacancy.open_now %}<p class="msg">This vacancy is closed.</p>{% endif %}
+    <h1>{{ vacancy.title }}</h1>
+    <p class="muted">{% include "hub/_icon.html" with name="place" %} {{ vacancy.location }} · {{ vacancy.department }} · {{ vacancy.get_contract_type_display }}</p>
+    {% if vacancy.salary %}<p class="muted">Salary: {{ vacancy.salary }}</p>{% endif %}
+    {% if vacancy.closes_on and vacancy.open_now %}<p><span class="pill orange">Closes {{ vacancy.closes_on|date:"j F Y" }}</span></p>{% endif %}
+    {% if vacancy.contact %}<p class="small muted">Recruiter: <a href="{{ vacancy.contact.get_absolute_url }}">{{ vacancy.contact }}</a></p>{% endif %}
+
+    <div class="post-body">{{ vacancy.description|rich }}</div>
+
+    {% if mine %}
+    <h2 class="section-title">You're interested</h2>
+    <p>You told the recruiter on {{ mine.created_at|date:"j F Y" }}.</p>
+    {% if mine.note %}<div class="quote">{{ mine.note|linebreaksbr }}</div>{% endif %}
+    <form method="post" action="{% url 'jobs:withdraw' vacancy.pk %}">{% csrf_token %}<button class="btn">Withdraw</button></form>
+    {% elif vacancy.open_now %}
+    <h2 class="section-title">Interested?</h2>
+    <form method="post" action="{% url 'jobs:interest' vacancy.pk %}">
+      {% csrf_token %}
+      <div class="field">
+        <label for="note">Note for the recruiter (optional)</label>
+        <textarea id="note" name="note" rows="3" maxlength="1000"></textarea>
+        <p class="small muted">Only the recruiter and the people who manage vacancies can see that you're interested.</p>
+      </div>
+      <button class="btn primary">I'm interested</button>
+    </form>
+    {% endif %}
+
+    {% if vacancy.apply_url %}
+    <h2 class="section-title">Share it</h2>
+    <p>Know someone who would be good at this? Send them the public advert:</p>
+    <p>{% include "hub/_icon.html" with name="link" %} <a href="{{ vacancy.apply_url }}" target="_blank" rel="noopener noreferrer">{{ vacancy.apply_url }}</a></p>
+    {% endif %}
+
+    {% if can_see_interested %}
+    {% with count=vacancy.interests.count %}
+    <p><a href="{% url 'jobs:interested' vacancy.pk %}">{{ count }} colleague{{ count|pluralize }} {{ count|pluralize:"is,are" }} interested</a></p>
+    {% endwith %}
+    {% endif %}
+    {% if perms.jobs.change_vacancy or perms.jobs.delete_vacancy %}
+    <div class="actions">
+      {% if perms.jobs.change_vacancy %}
+      <a class="btn" href="{% url 'jobs:edit' vacancy.pk %}">Edit</a>
+      <form method="post" action="{% url 'jobs:toggle' vacancy.pk %}">{% csrf_token %}<input type="hidden" name="open" value="{% if vacancy.open_now %}0{% else %}1{% endif %}"><button class="btn">{% if vacancy.open_now %}Close{% else %}Reopen{% endif %}</button></form>
+      {% endif %}
+      {% if perms.jobs.delete_vacancy %}
+      <form method="post" action="{% url 'jobs:delete' vacancy.pk %}" data-confirm="Delete this vacancy? The list of interested colleagues is deleted with it.">{% csrf_token %}<button class="btn danger">Delete</button></form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </article>
+</div>
+{% endblock %}

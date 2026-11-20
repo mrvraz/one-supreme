@@ -1,0 +1,19 @@
+{% extends "hub/base.html" %}
+{% block title %}Reactions · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{{ post.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}Back to the post</a>
+  <h1>Reactions</h1>
+  <nav class="tabs" aria-label="Reactions">
+    <a href="?"{% if not kind %} aria-current="page"{% endif %}>All {{ total }}</a>
+    {% for key, emoji, count in tabs %}<a href="?kind={{ key }}"{% if key == kind %} aria-current="page"{% endif %}>{{ emoji }} {{ count }}</a>{% endfor %}
+  </nav>
+  <div class="card list">
+    {% for person, emoji in reactions %}
+    <a class="row" href="{{ person.get_absolute_url }}">{% include "hub/_avatar.html" with u=person size=40 %}
+      <span class="row-body"><span class="row-title">{{ person }}{% if person.pronouns %} <span class="muted small">({{ person.pronouns }})</span>{% endif %}</span><span class="row-sub">{{ person.job_title }}</span></span>
+      <span class="row-side" aria-hidden="true">{{ emoji }}</span></a>
+    {% empty %}<p class="empty">No reactions yet.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}

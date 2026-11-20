@@ -1,0 +1,33 @@
+# Demo server on Fly.io, London. Deploy with:  fly deploy --ha=false
+# Demo only: one machine, the database is SQLite on a 1 GB Fly disk, and email is printed to the log, not sent.
+# Secrets (set once with fly secrets set): SECRET_KEY, and optionally VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY for push.
+app = "staffhub-demo-q7k4"
+primary_region = "lhr"
+
+[build]
+  build-target = "fly"
+
+[env]
+  SITE_NAME = "One Supreme"
+  BRAND = "supreme"
+  BRAND_COLOR = "#1E7BC0"
+  SITE_URL = "https://staffhub-demo-q7k4.fly.dev"
+  ALLOWED_HOSTS = "staffhub-demo-q7k4.fly.dev"
+  CSRF_TRUSTED_ORIGINS = "https://staffhub-demo-q7k4.fly.dev"
+  ALLOW_PASSWORD_LOGIN = "1"
+  SECURE_SSL_REDIRECT = "1"
+  EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+[[mounts]]
+  source = "hub_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

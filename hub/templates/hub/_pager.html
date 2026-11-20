@@ -1,0 +1,7 @@
+{% if page.has_previous or page.has_next %}
+<nav class="pager" aria-label="Pages">
+  {% if page.has_previous %}<a class="btn" href="?{% if q %}q={{ q|urlencode }}&amp;{% endif %}{% if past %}past=1&amp;{% endif %}page={{ page.previous_page_number }}">Newer</a>{% endif %}
+  <span class="small muted">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="btn" href="?{% if q %}q={{ q|urlencode }}&amp;{% endif %}{% if past %}past=1&amp;{% endif %}page={{ page.next_page_number }}">Older</a>{% endif %}
+</nav>
+{% endif %}

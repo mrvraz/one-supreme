@@ -1,0 +1,18 @@
+{% extends "hub/base.html" %}
+{% block title %}About · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'menu' %}">{% include "hub/_icon.html" with name="back" %}Menu</a>
+  <h1>About and help</h1>
+  <nav class="card list">
+    <div class="row"><span class="row-icon">{% include "hub/_icon.html" with name="info" %}</span><span class="row-body"><span class="row-title">Version</span></span><span class="row-side">{{ version }}</span></div>
+    <a class="row" href="{% url 'whats_new' %}"><span class="row-icon">{% include "hub/_icon.html" with name="gift" %}</span><span class="row-body"><span class="row-title">What's new</span></span><span class="row-side">{% if unseen_notes %}{{ unseen_notes }} new{% endif %}<span class="chevron"></span></span></a>
+    {% if support_url %}<a class="row" href="{{ support_url }}" target="_blank" rel="noopener noreferrer"><span class="row-icon">{% include "hub/_icon.html" with name="comment" %}</span><span class="row-body"><span class="row-title">Get help</span><span class="row-sub">Contact the team that looks after the hub</span></span><span class="chevron"></span></a>{% endif %}
+    <a class="row" href="{% url 'library:kb' %}"><span class="row-icon">{% include "hub/_icon.html" with name="book" %}</span><span class="row-body"><span class="row-title">Knowledge base</span></span><span class="chevron"></span></a>
+    <a class="row" href="{% url 'library:legal' %}"><span class="row-icon">{% include "hub/_icon.html" with name="file" %}</span><span class="row-body"><span class="row-title">Legal</span><span class="row-sub">Terms and policies</span></span><span class="chevron"></span></a>
+    {% if privacy_url %}<a class="row" href="{{ privacy_url }}" target="_blank" rel="noopener noreferrer"><span class="row-icon">{% include "hub/_icon.html" with name="lock" %}</span><span class="row-body"><span class="row-title">Privacy notice</span></span><span class="chevron"></span></a>{% endif %}
+    <a class="row" href="{% url 'house_rules' %}"><span class="row-icon">{% include "hub/_icon.html" with name="shield" %}</span><span class="row-body"><span class="row-title">House rules</span></span><span class="chevron"></span></a>
+    <a class="row" href="{% url 'licences' %}"><span class="row-icon">{% include "hub/_icon.html" with name="copy" %}</span><span class="row-body"><span class="row-title">Open-source licences</span></span><span class="chevron"></span></a>
+  </nav>
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "hub/base.html" %}
+{% block title %}{{ post }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% if post.kind == 'news' %}{% url 'news' %}{% else %}{% url 'feed' %}{% endif %}">{% include "hub/_icon.html" with name="back" %}Back</a>
+  <h1 class="sr-only">{{ post }}</h1>
+  {% if stats %}
+  <div class="card">
+    <p class="small muted">Only you and other news publishers see this.</p>
+    <div class="stat-grid">
+      <p class="stat"><b>{{ stats.read }}</b> of {{ stats.audience }} opened it</p>
+      {% if post.requires_ack %}<p class="stat"><b>{{ stats.acknowledged }}</b> confirmed they've read it</p>{% endif %}
+    </div>
+    {% if post.requires_ack %}<p class="small"><a href="{% url 'news_readers' post.pk %}">See who has confirmed</a></p>{% endif %}
+  </div>
+  {% endif %}
+  {% if post.is_draft or post.is_scheduled %}
+  <div class="msg">{% if post.is_draft %}This is a draft. Only you can see it.{% else %}This is scheduled. Only you can see it until then.{% endif %}
+    <form method="post" action="{% url 'post_publish_now' post.pk %}" class="actions">{% csrf_token %}<button class="btn primary small">Publish now</button></form></div>
+  {% endif %}
+  {% include "hub/_post.html" %}
+  {% if post.requires_ack and post.is_live and post.author_id != user.pk %}
+  <div class="card ack-box">
+    {% if post.is_acknowledged %}<p>{% include "hub/_icon.html" with name="check" %} You confirmed you've read this.</p>
+    {% else %}<p><b>Please confirm you've read and understood this.</b></p>
+    <form method="post" action="{% url 'news_ack' post.pk %}">{% csrf_token %}<button class="btn primary">I've read this</button></form>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

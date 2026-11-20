@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "staff-hub",
+      "runtimeExecutable": "C:/Users/rzvm_/AppData/Local/Temp/claude/9dd7160492e8cda9/2c019040-162e-4bff-8758-6965f6894fce/scratchpad/venv/Scripts/python.exe",
+      "runtimeArgs": ["C:/Users/rzvm_/OneDrive/Documents/staff-hub/manage.py", "runserver", "127.0.0.1:8000", "--noreload"],
+      "port": 8000
+    },
+    {
+      "name": "staff-hub-demo-look",
+      "runtimeExecutable": "C:/Program Files/Git/usr/bin/env.exe",
+      "runtimeArgs": ["SITE_NAME=One Supreme", "BRAND=supreme", "BRAND_COLOR=#1E7BC0",
+        "C:/Users/rzvm_/AppData/Local/Temp/claude/9dd7160492e8cda9/2c019040-162e-4bff-8758-6965f6894fce/scratchpad/venv/Scripts/python.exe",
+        "C:/Users/rzvm_/OneDrive/Documents/staff-hub/manage.py", "runserver", "127.0.0.1:8000", "--noreload"],
+      "port": 8000
+    }
+  ]
+}

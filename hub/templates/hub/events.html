@@ -1,0 +1,22 @@
+{% extends "hub/base.html" %}
+{% block title %}Events · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'menu' %}">{% include "hub/_icon.html" with name="back" %}Menu</a>
+<div class="page-head">
+  <h1>{% if past %}Past events{% else %}Events{% endif %}</h1>
+  <a class="btn primary" href="{% url 'event_create' %}">{% include "hub/_icon.html" with name="plus" %} Create an event</a>
+</div>
+<form class="chips" method="get" role="search">
+  <a class="chip{% if not past %} on{% endif %}" href="?">Upcoming</a>
+  <a class="chip{% if past %} on{% endif %}" href="?past=1">Past</a>
+  {% if past %}<input type="hidden" name="past" value="1">{% endif %}
+  <label class="chip"><span class="sr-only">My reply</span><select name="reply"><option value="">Any reply</option>{% for value, label in replies %}<option value="{{ value }}"{% if value == reply %} selected{% endif %}>{{ label }}</option>{% endfor %}<option value="none"{% if reply == "none" %} selected{% endif %}>Not replied</option></select></label>
+  <label class="sr-only" for="q">Search events</label><input id="q" name="q" value="{{ q }}" placeholder="Search events" type="search" style="max-width: 220px">
+  <button class="btn">Show</button>
+</form>
+<div class="card list">
+  {% for event in page %}{% include "hub/_event_row.html" %}
+  {% empty %}<p class="empty"><span class="empty-title">{% if past %}No past events{% else %}No upcoming events{% endif %}</span>Keep an eye on this page for future events.</p>{% endfor %}
+</div>
+{% include "hub/_pager.html" %}
+{% endblock %}

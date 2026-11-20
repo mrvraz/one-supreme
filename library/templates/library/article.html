@@ -1,0 +1,19 @@
+{% extends "hub/base.html" %}
+{% load hubtags %}
+{% block title %}{{ article.title }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'library:kb' %}">{% include "hub/_icon.html" with name="back" %}Back</a>
+  <article class="card">
+    <h1>{{ article.title }}</h1>
+    <p class="small muted">{{ article.category.name }} · Updated {{ article.updated_at|date:"j F Y" }}{% if article.is_legal %} · <span class="pill grey">Legal</span>{% endif %}</p>
+    <div class="post-body">{{ article.body|rich }}</div>
+    {% if perms.library.change_article or perms.library.delete_article %}
+    <div class="actions">
+      {% if perms.library.change_article %}<a class="btn" href="{% url 'library:article_edit' article.pk %}">Edit article</a>{% endif %}
+      {% if perms.library.delete_article %}<form method="post" action="{% url 'library:article_delete' article.pk %}" data-confirm="Delete this article?">{% csrf_token %}<button class="btn danger">Delete</button></form>{% endif %}
+    </div>
+    {% endif %}
+  </article>
+</div>
+{% endblock %}

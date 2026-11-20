@@ -1,0 +1,15 @@
+Demo photos for seed_demo, from Pexels (https://www.pexels.com/license/): free to use, no credit required.
+Resized and re-saved without camera data. Demo data only; they are not part of the app.
+
+bikes.jpg      https://www.pexels.com/photo/bicycles-parked-on-sidewalk-near-buildings-3921538/
+books.jpg      https://www.pexels.com/photo/stacked-up-books-on-wooden-table-6531390/
+cakes.jpg      https://www.pexels.com/photo/cakes-and-cupcakes-on-the-table-3592423/
+coffee.jpg     https://www.pexels.com/photo/industrial-espresso-machine-in-cozy-cafe-setting-30153455/
+exit.jpg       https://www.pexels.com/photo/illuminated-green-exit-sign-23523335/
+food.jpg       https://www.pexels.com/photo/appetizing-finger-food-platter-with-mini-sandwiches-31970816/
+laptop.jpg     https://www.pexels.com/photo/laptop-on-a-wooden-desk-25636747/
+lights.jpg     https://www.pexels.com/photo/christmas-lights-bokeh-12944754/
+office.jpg     https://www.pexels.com/photo/interior-design-of-an-office-5483233/
+social.jpg     https://www.pexels.com/photo/people-sitting-on-the-floor-near-fire-pit-4881681/
+sunrise.jpg    https://www.pexels.com/photo/sunrise-reflecting-in-skyscrapers-8558941/
+warehouse.jpg  https://www.pexels.com/photo/boxes-on-shelves-inside-a-warehouse-5156696/

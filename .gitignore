@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+data/
+staticfiles/
+data-*/
+demo-logins.txt
+node_modules/
+# Agent working copies and per-computer Claude settings
+.claude/worktrees/
+.claude/settings.local.json

@@ -1,0 +1,35 @@
+{% extends "hub/base.html" %}{% load hubtags %}
+{% block title %}{{ person }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <section class="card">
+    {% if person.cover %}<img class="cover" src="{{ person.cover.url }}" alt="">{% endif %}
+    <div class="profile-head">
+      <span class="avatar-wrap">{% include "hub/_avatar.html" with u=person size=96 %}{% if person.is_online %}<i class="presence" title="Active now"></i>{% endif %}</span>
+      <div style="flex: 1; min-width: 200px">
+        <h1>{{ person }}{% if person.pronouns %} <span class="muted small">({{ person.pronouns }})</span>{% endif %}</h1>
+        {% if person.job_title or person.department %}<p class="muted">{{ person.job_title }}{% if person.job_title and person.department %} · {% endif %}{{ person.department }}</p>{% endif %}
+      </div>
+      <div class="actions" style="margin: 0">
+        {% if person == user %}<a class="btn" href="{% url 'profile_edit' %}">{% include "hub/_icon.html" with name="edit" %} Edit profile</a>
+        {% elif person.is_active %}<a class="btn primary" href="{% url 'chat:with' person.pk %}">{% include "hub/_icon.html" with name="chat" %} Message</a>
+        <details class="dropdown more"><summary aria-label="More">{% include "hub/_icon.html" with name="more" %}</summary><div class="menu"><a class="danger" href="{% url 'report' 'person' person.pk %}">{% include "hub/_icon.html" with name="flag" %} Report {{ person.first_name|default:"this person" }}</a></div></details>{% endif %}
+      </div>
+    </div>
+    {% if not person.is_active %}<p><span class="pill grey">No longer with the company</span></p>{% endif %}
+    {% if person.bio %}<div class="post-body">{{ person.bio|rich }}</div>{% endif %}
+    <div class="profile-facts small">
+      {% if person.share_email or person == user %}<span>{% include "hub/_icon.html" with name="mail" %} <a href="mailto:{{ person.email }}">{{ person.email }}</a></span>{% endif %}
+      {% if person.phone %}<span>{% include "hub/_icon.html" with name="phone" %} <a href="tel:{{ person.phone }}">{{ person.phone }}</a></span>{% endif %}
+      {% if person.languages %}<span>{% include "hub/_icon.html" with name="globe" %} Speaks {{ person.languages }}</span>{% endif %}
+      {% if person.birthday %}<span>{% include "hub/_icon.html" with name="cake" %} Birthday {{ person.birthday|date:"j F" }}</span>{% endif %}
+      {% if person.start_date %}<span>{% include "hub/_icon.html" with name="briefcase" %} Joined in {{ person.start_date|date:"F Y" }}</span>{% endif %}
+    </div>
+    {% if units %}<div class="chips" style="margin-top: 12px">{% for unit in units %}<a class="chip" href="{{ unit.get_absolute_url }}">{% include "hub/_icon.html" with name="building" %} {{ unit }}</a>{% endfor %}</div>{% endif %}
+  </section>
+  <h2 class="section-title">Posts</h2>
+  {% for post in posts %}{% include "hub/_post.html" %}
+  {% empty %}<div class="card empty">No posts yet.</div>{% endfor %}
+  {% include "hub/_pager.html" %}
+</div>
+{% endblock %}

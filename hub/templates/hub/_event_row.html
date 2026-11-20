@@ -1,0 +1,8 @@
+<a class="event-row{% if compact %} compact{% endif %}" href="{{ event.get_absolute_url }}">
+  <span class="date-badge" aria-hidden="true"><span>{{ event.starts_at|date:"M" }}</span><b>{{ event.starts_at|date:"j" }}</b></span>
+  <span class="event-info">
+    <span class="event-title">{{ event.title }}</span>
+    <span class="small muted">{{ event.starts_at|date:"D j M, H:i" }}{% if event.location %} · {{ event.location }}{% endif %}</span>
+    {% if not compact %}<span class="small muted">{% if event.community %}{{ event.community }} · {% endif %}{{ event.going }} going{% if event.my_status %} · <span class="pill">You: {{ event.my_status }}</span>{% endif %}</span>{% endif %}
+  </span>
+</a>

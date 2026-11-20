@@ -1,0 +1,18 @@
+/* Journeys-only styles. Colours come from the variables in hub/app.css, so both looks work. */
+.journey-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.journey-grid .journey-card { display: flex; flex-direction: column; margin: 0; }
+.journey-grid .journey-card .btn { margin-top: auto; }
+.journey-card { overflow: hidden; } /* rounds the corners of the cover */
+.journey-card .post-cover { margin: -16px -16px 14px; }
+.journey-card h2 a { color: var(--text); }
+.journey-card .progress { margin: 12px 0 6px; }
+.row-icon.done { color: var(--green-text); }
+.row-icon.locked { color: var(--faint); }
+.journey-stats { margin-bottom: 16px; }
+.journey-table { width: 100%; border-collapse: collapse; }
+.journey-table th, .journey-table td { padding: 12px 16px; text-align: left; }
+.journey-table th { font-size: 13px; color: var(--muted); }
+.journey-table td { border-top: 0.5px solid var(--g-sep); }
+.journey-table a { color: var(--text); font-weight: 600; }
+#id_audiences { display: grid; gap: 6px; max-height: 240px; overflow-y: auto; }
+#id_audiences label { display: inline-flex; align-items: center; gap: 8px; }

@@ -1,0 +1,48 @@
+{% extends "hub/base.html" %}{% load hubtags %}
+{% block title %}{{ event }} · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'events' %}">{% include "hub/_icon.html" with name="back" %}All events</a>
+  <article class="card event-detail">
+    <div class="event-detail-head">
+      <span class="date-badge large" aria-hidden="true"><span>{{ event.starts_at|date:"M" }}</span><b>{{ event.starts_at|date:"j" }}</b></span>
+      <div>
+        <h1>{{ event.title }}</h1>
+        <p class="muted">{% include "hub/_icon.html" with name="clock" %} {{ event.starts_at|date:"l j F Y, H:i" }}{% if event.ends_at %} – {% if event.ends_at|date:"Ymd" == event.starts_at|date:"Ymd" %}{{ event.ends_at|date:"H:i" }}{% else %}{{ event.ends_at|date:"l j F, H:i" }}{% endif %}{% endif %}</p>
+        {% if event.location %}<p class="muted">{% include "hub/_icon.html" with name="place" %} {{ event.location }}</p>{% endif %}
+        <p class="small muted">Organised by <a href="{{ event.created_by.get_absolute_url }}">{{ event.created_by }}</a>{% if event.community %} for <a href="{{ event.community.get_absolute_url }}">{{ event.community }}</a>{% endif %}</p>
+      </div>
+      {% if can_manage %}
+      <div class="actions">
+        <a class="btn small" href="{% url 'event_edit' event.pk %}">{% include "hub/_icon.html" with name="edit" %} Edit</a>
+        <form method="post" action="{% url 'event_delete' event.pk %}" data-confirm="Delete this event?">{% csrf_token %}<button class="btn small danger">{% include "hub/_icon.html" with name="trash" %} Delete</button></form>
+      </div>
+      {% endif %}
+    </div>
+    {% if event.description %}<div class="post-body">{{ event.description|rich }}</div>{% endif %}
+
+    <form class="rsvp" method="post" action="{% url 'rsvp' event.pk %}">
+      {% csrf_token %}
+      <span class="small muted">Are you going?</span>
+      {% for value, label in statuses %}
+      <button class="btn{% if mine == value %} primary{% endif %}" name="status" value="{{ value }}" aria-pressed="{% if mine == value %}true{% else %}false{% endif %}">{{ label }}</button>
+      {% endfor %}
+      <a class="btn" href="{% url 'event_ics' event.pk %}">Add to calendar</a>
+    </form>
+    {% if reminder_form %}
+    <details class="reminders">
+      <summary><b>Reminders for this event</b> <span class="small muted">· your default is set in Settings</span></summary>
+      <form method="post" action="{% url 'event_reminders' event.pk %}" style="margin-top: 10px">{% csrf_token %}{{ reminder_form.reminders }}
+        <div class="actions"><button class="btn small primary">Save reminders</button></div></form>
+    </details>
+    {% endif %}
+
+    <h2 class="section-title">Going ({{ going|length }})</h2>
+    <div class="member-faces">
+      {% for person in going %}<a href="{{ person.get_absolute_url }}" title="{{ person }}">{% include "hub/_avatar.html" with u=person size=36 %}<span class="sr-only">{{ person }}</span></a>
+      {% empty %}<p class="muted small">No one yet.</p>{% endfor %}
+    </div>
+    {% if maybe %}<p class="small muted">Maybe: {{ maybe|join:", " }}</p>{% endif %}
+  </article>
+</div>
+{% endblock %}

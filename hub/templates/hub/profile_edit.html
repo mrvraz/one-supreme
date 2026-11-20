@@ -1,0 +1,14 @@
+{% extends "hub/base.html" %}
+{% block title %}Edit profile · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{{ user.get_absolute_url }}">{% include "hub/_icon.html" with name="back" %}Your profile</a>
+  <form class="card" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <h1>Edit your profile</h1>
+    {% if OIDC_ENABLED %}<p class="small muted">Your name and email come from your work account.</p>{% endif %}
+    {% include "hub/_form_fields.html" %}
+    <div class="actions"><a class="btn" href="{{ user.get_absolute_url }}">Cancel</a> <button class="btn primary">Save</button></div>
+  </form>
+</div>
+{% endblock %}

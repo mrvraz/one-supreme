@@ -1,0 +1,14 @@
+{% if form.non_field_errors %}<div class="msg error">{{ form.non_field_errors }}</div>{% endif %}
+{% for field in form %}
+<div class="field">
+  {% if field.widget_type == "checkbox" %}
+    <label class="check">{{ field }} {{ field.label }}</label>
+  {% else %}
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {% if field.widget_type == "file" and field.value %}<p class="small muted">Current: <a href="{{ field.value.url }}">photo</a></p>{% endif %}
+    {{ field }}
+  {% endif %}
+  {% if field.help_text %}<p class="small muted">{{ field.help_text }}</p>{% endif %}
+  {{ field.errors }}
+</div>
+{% endfor %}

@@ -1,0 +1,31 @@
+{% load hubtags %}<div class="comment{% if c.parent_id %} reply{% endif %}" id="comment-{{ c.pk }}">
+  <a href="{{ c.author.get_absolute_url }}" tabindex="-1">{% include "hub/_avatar.html" with u=c.author size=32 %}</a>
+  <div>
+    <div class="bubble">
+      <a class="name" href="{{ c.author.get_absolute_url }}">{{ c.author }}</a>
+      <div id="comment-body-{{ c.pk }}">{{ c.body_html }}</div>
+      {% if c.image %}<a href="{{ c.image.url }}" target="_blank" rel="noopener"><img src="{{ c.image.url }}" alt="Picture added to the comment" loading="lazy"></a>{% endif %}
+    </div>
+    {% if TRANSLATE_ENABLED and c.body %}<div class="translation small" hidden></div>{% endif %}
+    <div class="small muted comment-actions">
+      <time datetime="{{ c.created_at|date:'c' }}">{{ c.created_at|timesince }} ago</time>
+      <details class="dropdown react-picker">
+        <summary class="link{% if c.my_reaction %} on{% endif %}">{% if c.my_reaction %}{{ REACTION_EMOJI|lookup:c.my_reaction }}{% else %}Like{% endif %}{% if c.reaction_total %} · {{ c.reaction_total }}{% endif %}</summary>
+        <div class="menu" role="group" aria-label="React to the comment">
+          {% for kind, label in REACTION_CHOICES %}
+          <form method="post" action="{% url 'comment_react' c.pk %}" data-swap="#post-{{ post.pk }}">{% csrf_token %}{% if full %}<input type="hidden" name="full" value="1">{% endif %}<input type="hidden" name="kind" value="{{ kind }}">
+            <button class="{% if c.my_reaction == kind %}on{% endif %}" title="{{ label }}" aria-label="{{ label }}">{{ REACTION_EMOJI|lookup:kind }}</button>
+          </form>
+          {% endfor %}
+        </div>
+      </details>
+      {% if not c.parent_id %}<button type="button" class="link" data-reply="{{ c.pk }}" data-name="{{ c.author }}">Reply</button>{% endif %}
+      {% if TRANSLATE_ENABLED and c.body %}<button type="button" class="link" data-translate="{% url 'translate' 'comment' c.pk %}" data-into="#comment-{{ c.pk }} .translation">See translation</button>{% endif %}
+      {% if c.author_id == user.pk or perms.hub.delete_comment %}
+      <form method="post" action="{% url 'comment_delete' c.pk %}" data-swap="#post-{{ post.pk }}" data-confirm="Delete this comment?">{% csrf_token %}{% if full %}<input type="hidden" name="full" value="1">{% endif %}<button class="link">Delete</button></form>
+      {% endif %}
+      {% if c.author_id != user.pk %}<a href="{% url 'report' 'comment' c.pk %}">Report</a>{% endif %}
+    </div>
+  </div>
+</div>
+{% for r in c.reply_list %}{% include "hub/_comment.html" with c=r %}{% endfor %}

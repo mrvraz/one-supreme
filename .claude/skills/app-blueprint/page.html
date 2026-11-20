@@ -1,0 +1,2505 @@
+<title>One Supreme Blueprint</title>
+<meta name="description" content="One Supreme's live roadmap and build blueprint: the plan to the end of February, and 15 steps from idea to a hardened, maintained app, ticked off by ONE SUPREME.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: an infinite dotted board. A "main" road snakes through 15 numbered stations; each station grows a git-style
+   tree (step -> topics -> checks). Security HQ sits above the road as a row of posters. Floating panels sit over the board. */
+:root{
+  --canvas:oklch(0.972 0.006 255);
+  --dot:oklch(0.80 0.014 258);
+  --surface:oklch(1 0 0);
+  --surface-2:oklch(0.975 0.005 258);
+  --ink:oklch(0.25 0.025 264);
+  --muted:oklch(0.49 0.022 264);
+  --line:oklch(0.905 0.009 258);
+  --accent:oklch(0.52 0.19 266);
+  --must:oklch(0.56 0.2 27);
+  --doing:oklch(0.72 0.15 72);
+  --live:oklch(0.66 0.17 150);
+  --hq:oklch(0.45 0.15 268);
+  --hq-soft:oklch(0.955 0.025 268);
+  --shadow-sm:0 1px 2px oklch(0.3 0.04 264 / .07);
+  --shadow:0 1px 2px oklch(0.3 0.04 264 / .07),0 6px 18px oklch(0.3 0.04 264 / .07);
+  --shadow-lg:0 2px 6px oklch(0.3 0.04 264 / .08),0 18px 48px oklch(0.3 0.04 264 / .14);
+  --pL:0.62;--pC:0.15;  /* step line colour */
+  --tL:0.962;--tC:0.028;/* step tint */
+  --bL:0.85;--bC:0.075; /* step border */
+  --iL:0.42;--iC:0.12;  /* step ink */
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --canvas:oklch(0.185 0.016 264);--dot:oklch(0.34 0.018 264);--surface:oklch(0.238 0.018 264);--surface-2:oklch(0.27 0.02 264);
+  --ink:oklch(0.94 0.008 264);--muted:oklch(0.73 0.016 264);--line:oklch(0.345 0.018 264);--accent:oklch(0.76 0.13 266);
+  --must:oklch(0.74 0.16 27);--doing:oklch(0.8 0.14 78);--live:oklch(0.76 0.15 150);--hq:oklch(0.8 0.1 268);--hq-soft:oklch(0.29 0.045 268);
+  --shadow-sm:0 1px 2px oklch(0 0 0 / .35);--shadow:0 1px 2px oklch(0 0 0 / .4),0 8px 22px oklch(0 0 0 / .32);--shadow-lg:0 2px 8px oklch(0 0 0 / .45),0 22px 56px oklch(0 0 0 / .5);
+  --pL:0.75;--pC:0.13;--tL:0.285;--tC:0.04;--bL:0.43;--bC:0.075;--iL:0.86;--iC:0.08;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --canvas:oklch(0.185 0.016 264);--dot:oklch(0.34 0.018 264);--surface:oklch(0.238 0.018 264);--surface-2:oklch(0.27 0.02 264);
+  --ink:oklch(0.94 0.008 264);--muted:oklch(0.73 0.016 264);--line:oklch(0.345 0.018 264);--accent:oklch(0.76 0.13 266);
+  --must:oklch(0.74 0.16 27);--doing:oklch(0.8 0.14 78);--live:oklch(0.76 0.15 150);--hq:oklch(0.8 0.1 268);--hq-soft:oklch(0.29 0.045 268);
+  --shadow-sm:0 1px 2px oklch(0 0 0 / .35);--shadow:0 1px 2px oklch(0 0 0 / .4),0 8px 22px oklch(0 0 0 / .32);--shadow-lg:0 2px 8px oklch(0 0 0 / .45),0 22px 56px oklch(0 0 0 / .5);
+  --pL:0.75;--pC:0.13;--tL:0.285;--tC:0.04;--bL:0.43;--bC:0.075;--iL:0.86;--iC:0.08;color-scheme:dark}
+
+html,body{height:100%;overflow:hidden}
+body{background:var(--canvas);color:var(--ink);font:400 14px/1.45 var(--font-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+.hue{--pc:oklch(var(--pL) var(--pC) var(--h));--pt:oklch(var(--tL) var(--tC) var(--h));--pb:oklch(var(--bL) var(--bC) var(--h));--pi:oklch(var(--iL) var(--iC) var(--h))}
+
+/* ---------- board ---------- */
+#viewport{position:fixed;inset:0;overflow:hidden;touch-action:none;cursor:grab;background-color:var(--canvas);
+  background-image:radial-gradient(circle,var(--dot) 1.15px,transparent 1.6px);user-select:none;-webkit-user-select:none}
+#viewport.grabbing{cursor:grabbing}
+#board{position:absolute;left:0;top:0;transform-origin:0 0}
+#board.moving{will-change:transform}
+#wires{position:absolute;overflow:visible;pointer-events:none}
+.w-trunk{fill:none;stroke-width:18;stroke-linecap:round}
+.w-dash{fill:none;stroke:var(--canvas);stroke-width:2.5;stroke-dasharray:16 26;stroke-linecap:round;opacity:.95}
+.w-drop{fill:none;stroke:var(--pc);stroke-width:7;stroke-linecap:round}
+.w-ph{fill:none;stroke:var(--pc);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.w-dot{fill:var(--surface);stroke:var(--pc);stroke-width:3}
+.st-c{fill:var(--surface);stroke:var(--pc);stroke-width:10}
+.st-t{fill:var(--pi);font:700 30px var(--font-mono);text-anchor:middle;dominant-baseline:central}
+.stop{stop-color:var(--pc)}
+.node{position:absolute;box-sizing:border-box}
+
+/* step node */
+.pnode{background:var(--pt);border:2px solid var(--pb);border-radius:24px;padding:18px 22px 18px;display:flex;flex-direction:column;gap:8px;cursor:pointer;box-shadow:var(--shadow)}
+.pn-top{display:flex;gap:16px;align-items:center}
+.pn-num{font:800 60px/.85 var(--font-display);color:var(--pc);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.pn-eyebrow{font:600 11px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--pi)}
+.pn-title{margin:6px 0 0;font:700 26px/1.06 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+.pn-blurb{margin:0;font:400 13.5px/1.42 var(--font-body);color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pn-foot{display:flex;align-items:center;gap:10px;margin-top:auto}
+.bar{flex:1;height:6px;border-radius:99px;background:var(--pb);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--pc);border-radius:inherit;transition:width .3s}
+.pn-count{font:600 12px var(--font-mono);color:var(--pi);font-variant-numeric:tabular-nums}
+
+/* topic node */
+.tnode{background:var(--surface);border:2px solid var(--pb);border-radius:16px;padding:12px 16px;display:flex;flex-direction:column;justify-content:center;gap:5px;cursor:pointer;box-shadow:var(--shadow)}
+.tnode h3{margin:0;font:650 18px/1.15 var(--font-display);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tn-meta{font:500 11px/1 var(--font-mono);color:var(--muted);letter-spacing:.03em;font-variant-numeric:tabular-nums}
+
+/* check (item) card */
+.item{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:12px 14px 10px;display:flex;flex-direction:column;gap:5px;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow .15s,border-color .15s,opacity .2s}
+.item:hover{border-color:var(--pb);box-shadow:var(--shadow)}
+.item .open{all:unset;cursor:pointer;font:600 14.5px/1.3 var(--font-body);color:var(--ink);padding-right:28px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item .open::after{content:"";position:absolute;inset:0;border-radius:13px}
+.item:has(.open:focus-visible){outline:2.5px solid var(--accent);outline-offset:2px}
+.item .s{margin:0;font:400 12.5px/1.42 var(--font-body);color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:0}
+.item .f{margin-top:auto;display:flex;align-items:center;gap:7px;overflow:hidden;white-space:nowrap}
+.tg{font:600 10px/1 var(--font-mono);letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.tg.must{color:var(--must);border:1px solid currentColor;border-radius:4px;padding:2px 4px}
+.lk{margin-left:auto;font:600 10.5px/1 var(--font-mono);color:var(--pi)}
+.chk{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;border:2px solid var(--pb);background:var(--surface);display:grid;place-items:center;cursor:pointer;z-index:1;padding:0}
+.chk:hover{border-color:var(--pc)}
+.chk svg{width:12px;height:12px;stroke:var(--surface);stroke-width:3.2;fill:none;opacity:0}
+.item.done .chk{background:var(--pc);border-color:var(--pc)}
+.item.done .chk svg{opacity:1}
+.item.done .open{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--pb);text-decoration-thickness:2px}
+.item.sel{outline:3px solid var(--pc);outline-offset:3px}
+
+/* start / end */
+.endpoint{border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;background:var(--surface);border:3px solid var(--ink);box-shadow:var(--shadow-lg);cursor:pointer;padding:20px}
+.endpoint .k{font:700 12px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.endpoint .t{font:800 34px/1 var(--font-display);letter-spacing:-.02em}
+.endpoint .d{font:500 13px/1.35 var(--font-body);color:var(--muted);max-width:200px}
+
+/* level of detail */
+.lod-mid .item>*,.lod-far .item>*{visibility:hidden}
+.lod-mid .item,.lod-far .item{box-shadow:none;background-image:linear-gradient(var(--pb),var(--pb)),linear-gradient(var(--line),var(--line)),linear-gradient(var(--line),var(--line));
+  background-repeat:no-repeat;background-size:66% 16px,88% 10px,70% 10px;background-position:14px 18px,14px 52px,14px 70px}
+.lod-mid .item.done,.lod-far .item.done{background-color:var(--pt);background-image:linear-gradient(var(--pc),var(--pc)),linear-gradient(var(--pb),var(--pb)),linear-gradient(var(--pb),var(--pb))}
+.lod-far .pnode>*,.lod-far .tnode>*,.lod-far .hq-card>*,.lod-far .endpoint>*{visibility:hidden}
+.lod-far .node{box-shadow:none}
+.lod-far .tnode{background:var(--pt)}
+.lod-far .hq-card{background:var(--hq-soft);border-color:transparent}
+
+/* filtering (search + lenses) */
+.filtering .item:not(.hit),.filtering .tnode:not(.hit),.filtering .pnode:not(.hit){opacity:.15}
+.filtering .item.hit{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in oklch,var(--accent) 35%,transparent),var(--shadow)}
+.lod-mid.filtering .item.hit,.lod-far.filtering .item.hit{background-color:color-mix(in oklch,var(--accent) 26%,var(--surface))}
+.filtering #wires{opacity:.45}
+
+/* screen-space labels for the zoomed-out view */
+#labels{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .2s}
+#labels.on{opacity:1}
+#labels.on .olabel{pointer-events:auto}
+.olabel{position:absolute;left:0;top:0;padding:9px 13px;border-radius:14px;background:var(--surface);border:2px solid var(--pc);box-shadow:var(--shadow);display:flex;gap:10px;align-items:center;cursor:pointer;max-width:260px;box-sizing:border-box}
+.olabel:hover{background:var(--pt)}
+.ol-n{font:800 22px/1 var(--font-display);color:var(--pc);font-variant-numeric:tabular-nums}
+.ol-t{font:650 14.5px/1.15 var(--font-display);color:var(--ink);text-wrap:balance}
+.ol-m{display:block;margin-top:3px;font:600 10.5px/1 var(--font-mono);color:var(--accent)}
+.ol-m:empty{display:none}
+.olabel.hql{--pc:var(--hq);--pt:var(--hq-soft)}
+.olabel.compact{padding:6px 9px;gap:0}
+.olabel.compact .ol-t,.olabel.compact .ol-m{display:none}
+.olabel.compact .ol-n{font-size:17px}
+.lod-far .w-trunk{stroke-width:64}.lod-far .w-dash{display:none}.lod-far .w-drop{stroke-width:24}.lod-far .w-ph{stroke-width:10}.lod-far .w-dot,.lod-far .st-c,.lod-far .st-t{display:none}
+.lod-mid .w-trunk{stroke-width:30}.lod-mid .w-drop{stroke-width:11}.lod-mid .w-ph{stroke-width:5}
+
+/* ---------- floating UI ---------- */
+.float{position:fixed;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg)}
+.ibtn{width:34px;height:34px;flex:none;border-radius:9px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;padding:0}
+.ibtn:hover{background:var(--surface-2)}
+.ibtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+#nav{left:calc(16px + env(safe-area-inset-left,0px));top:calc(16px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:300px;display:flex;flex-direction:column;overflow:hidden;z-index:5}
+#nav.collapsed{bottom:auto}
+#nav.collapsed #navBody{display:none}
+.nav-head{display:flex;gap:12px;align-items:center;padding:12px 14px 12px 12px;border-bottom:1px solid var(--line)}
+#nav.collapsed .nav-head{border-bottom:0}
+.nav-head h1{margin:0;font:750 19px/1.1 var(--font-display);letter-spacing:-.01em}
+.nav-head p{margin:3px 0 0;font:500 11px var(--font-mono);color:var(--muted)}
+#navBody{overflow:auto;flex:1;padding:12px 10px 16px;overscroll-behavior:contain}
+.overall{padding:4px 8px 12px;display:grid;gap:7px}
+.overall .row{display:flex;justify-content:space-between;font:600 12px var(--font-mono);color:var(--muted)}
+.overall .bar{--pb:var(--line);--pc:var(--accent);height:7px}
+.navsec{margin:10px 8px 6px;font:600 10.5px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+#steps{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:2px}
+#steps a{display:grid;grid-template-columns:28px 1fr auto;column-gap:10px;row-gap:6px;align-items:center;padding:8px 10px;border-radius:10px;color:var(--ink);text-decoration:none}
+#steps a:hover{background:var(--surface-2)}
+#steps a.cur{background:var(--pt)}
+#steps .sn{grid-row:1/3;font:700 13px var(--font-mono);color:var(--pc);width:28px;height:28px;border-radius:8px;border:2px solid var(--pb);display:grid;place-items:center;background:var(--surface)}
+#steps .stt{font:600 13.5px/1.2 var(--font-body);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#steps .sc{font:500 11px var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+#steps .sc.m{color:var(--accent);font-weight:700}
+#steps .bar{grid-column:2/4;height:4px}
+#steps a.hqlink{--pc:var(--hq);--pb:var(--hq-soft);--pt:var(--hq-soft)}
+#steps a.hqlink .sn{font-size:14px}
+.legend{display:grid;gap:8px;padding:2px 8px}
+.legend div{display:grid;grid-template-columns:62px 1fr;gap:8px;align-items:baseline;font-size:12.5px;color:var(--muted)}
+.legend .tg{justify-self:start}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;padding:2px 8px;font-size:12.5px;color:var(--muted)}
+kbd{font:600 11px var(--font-mono);padding:2px 6px;border-radius:5px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);justify-self:start}
+.note{margin:12px 8px 0;font-size:12px;color:var(--muted)}
+#reset{margin:10px 8px 0;height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font:600 12.5px var(--font-body);cursor:pointer;color:var(--muted)}
+#reset.arm{border-color:var(--must);color:var(--must)}
+
+#tools{top:calc(16px + env(safe-area-inset-top,0px));left:calc(332px + env(safe-area-inset-left,0px));right:calc(16px + env(safe-area-inset-right,0px));max-width:max-content;display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px;z-index:4}
+.search{display:flex;align-items:center;gap:8px;padding:0 6px 0 12px;height:38px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);flex:1 1 230px;min-width:0}
+.search:focus-within{border-color:var(--accent)}
+.search>svg{width:16px;height:16px;flex:none;stroke:var(--muted);fill:none;stroke-width:2.2;stroke-linecap:round}
+.search input{border:0;background:transparent;outline:none;font:500 14px var(--font-body);color:var(--ink);width:100%;min-width:0}
+.search input::-webkit-search-cancel-button{display:none}
+#qcount{font:600 11.5px var(--font-mono);color:var(--accent);white-space:nowrap}
+.qnav{width:28px;height:28px;border-radius:7px;border:0;background:transparent;cursor:pointer;color:var(--muted);display:grid;place-items:center;padding:0}
+.qnav:hover{background:var(--line);color:var(--ink)}
+.qnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+#lenses{display:flex;gap:6px;flex-wrap:wrap}
+.lens{height:34px;padding:0 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface);font:600 12.5px var(--font-body);cursor:pointer;display:inline-flex;gap:7px;align-items:center;white-space:nowrap}
+.lens:hover{background:var(--surface-2)}
+.lens .g{font:700 11px var(--font-mono);color:var(--muted)}
+.lens.must .g{color:var(--must)}
+.lens[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.lens[aria-pressed="true"] .g{color:inherit}
+
+#dock{right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));padding:8px;z-index:4;display:flex;flex-direction:column;gap:8px;transition:right .28s cubic-bezier(.2,.8,.2,1)}
+body.panel-open #dock{right:calc(472px + env(safe-area-inset-right,0px))}
+#mini{width:240px;height:148px;border-radius:10px;background:var(--surface-2);display:block;cursor:crosshair;touch-action:none}
+.zoom{display:flex;gap:4px;align-items:center}
+#zPct{min-width:54px;text-align:center;font:600 12px var(--font-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+#zFit{width:auto;padding:0 12px;font:600 12.5px var(--font-body);margin-left:auto}
+
+#panel{right:calc(16px + env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(440px,calc(100vw - 32px));z-index:6;display:flex;flex-direction:column;overflow:hidden;
+  transform:translateX(calc(100% + 40px));visibility:hidden;transition:transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s linear .28s}
+#panel.open{transform:none;visibility:visible;transition:transform .28s cubic-bezier(.2,.8,.2,1)}
+#panel:not(.open){pointer-events:none}
+.p-head{display:flex;align-items:center;gap:8px;padding:12px 12px 4px 22px}
+.crumb{flex:1;min-width:0;display:flex;gap:8px;align-items:center;font:600 11.5px var(--font-mono);color:var(--pi);letter-spacing:.02em}
+.crumb .cn{flex:none;font-weight:700;color:var(--surface);background:var(--pc);border-radius:6px;padding:3px 6px}
+.crumb .ct{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p-body{overflow:auto;padding:6px 22px 22px;flex:1;overscroll-behavior:contain;user-select:text;-webkit-user-select:text}
+.p-body h2{margin:6px 0 10px;font:750 27px/1.1 var(--font-display);letter-spacing:-.012em;text-wrap:balance}
+.p-body h3{margin:22px 0 8px;font:600 11px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.p-body p{margin:0 0 10px;max-width:65ch}
+.p-body .lede{font-size:16px;line-height:1.5;color:var(--ink)}
+.ptags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.ptags .tg{border:1px solid var(--line);border-radius:99px;padding:4px 8px}
+.ptags .tg.must{border-color:var(--must);border-radius:99px;padding:4px 8px}
+.how{margin:0;padding-left:22px;display:grid;gap:7px}
+.how li::marker{font:700 12px var(--font-mono);color:var(--pc)}
+.links{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.links a{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink);background:var(--surface-2)}
+.links a:hover{border-color:var(--pc);background:var(--pt)}
+.links a span{font-weight:600;font-size:13.5px}
+.links small{font:500 11px var(--font-mono);color:var(--muted);white-space:nowrap}
+.links a::after{content:"↗";color:var(--pc);font-weight:700}
+.pos{margin-top:22px!important;font:500 11.5px var(--font-mono);color:var(--muted)}
+.p-foot{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line);align-items:center}
+.pbtn{height:38px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font:600 13px var(--font-body);cursor:pointer;white-space:nowrap}
+.pbtn:hover{background:var(--surface-2)}
+.pbtn:disabled{opacity:.4;cursor:default}
+#pDone{flex:1;background:var(--ink);color:var(--surface);border-color:var(--ink)}
+#pDone[aria-pressed="true"]{background:var(--pc);border-color:var(--pc);color:var(--surface)}
+
+#hint{left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:9px 16px;font:500 12.5px var(--font-body);color:var(--muted);z-index:3;border-radius:99px;white-space:nowrap;transition:opacity .4s}
+#hint b{color:var(--ink);font-weight:600}
+#hint.gone{opacity:0;pointer-events:none}
+
+/* ---------- Security HQ posters ---------- */
+.hq{display:flex;flex-wrap:wrap;gap:44px;align-items:flex-start}
+.hq-card{flex:none;position:relative;background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:34px 36px 38px;box-shadow:var(--shadow);font-size:17px;line-height:1.5;box-sizing:border-box}
+.hq-card .kicker{font:600 13px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--hq)}
+.hq-card h2{margin:8px 0 8px;font:750 38px/1.04 var(--font-display);letter-spacing:-.018em;text-wrap:balance}
+.hq-card .sub{margin:0 0 24px;color:var(--muted);max-width:56ch}
+.hq-intro{background:var(--hq-soft);border-color:transparent}
+.hq-intro h2{font-size:92px;line-height:.92;letter-spacing:-.035em;margin:14px 0 18px}
+.hq-intro .lede{font-size:22px;line-height:1.42;margin:0 0 28px;max-width:30ch;text-wrap:pretty}
+.levers{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.lever{background:var(--surface);border-radius:18px;padding:18px 20px;border:2px solid var(--pb)}
+.lever b{display:block;font:750 26px/1.1 var(--font-display);color:var(--pc);margin-bottom:4px}
+.lever span{font-size:15.5px;color:var(--muted)}
+.hq-go{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap}
+.hq-go button{height:46px;padding:0 20px;border-radius:12px;border:2px solid var(--ink);background:var(--ink);color:var(--surface);font:650 16px var(--font-body);cursor:pointer}
+.hq-go button+button{background:transparent;color:var(--ink)}
+.mvs{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mvs li button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:30px 1fr auto;gap:14px;align-items:center;padding:12px 14px;border-radius:14px;border:1px solid var(--line);cursor:pointer;background:var(--surface)}
+.mvs li button:hover{border-color:var(--pc);background:var(--pt)}
+.mvs li button:focus-visible{outline:2.5px solid var(--accent)}
+.mvs .ck{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--pb);display:grid;place-items:center}
+.mvs .ck svg{width:13px;height:13px;stroke:var(--surface);stroke-width:3.4;fill:none;opacity:0}
+.mvs li.done .ck{background:var(--pc);border-color:var(--pc)}
+.mvs li.done .ck svg{opacity:1}
+.mvs .tx{font-weight:600;font-size:16.5px;line-height:1.3}
+.mvs .go{font:600 12px var(--font-mono);color:var(--pi);white-space:nowrap}
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.rule{border:1px solid var(--line);border-radius:16px;padding:16px 18px;background:var(--surface-2)}
+.rule b{display:block;font:700 19px/1.2 var(--font-display);margin-bottom:5px}
+.rule span{font-size:15px;color:var(--muted);line-height:1.45}
+.ring{border-radius:24px;padding:16px 18px 18px;background:oklch(calc(var(--tL) + var(--dep,0) * var(--rs,-.012)) calc(var(--tC) + .02) 268);border:2px solid oklch(var(--bL) var(--bC) 268)}
+:root[data-theme="dark"] .ring{--rs:.018}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ring{--rs:.018}}
+#steps .hqsub{display:flex;flex-wrap:wrap;gap:4px;padding:0 6px 8px 48px}
+#steps .hqsub a{display:inline-block;padding:3px 8px;border-radius:99px;border:1px solid var(--line);font:500 11.5px/1.3 var(--font-body);color:var(--muted)}
+#steps .hqsub a:hover{color:var(--ink);border-color:var(--hq);background:var(--hq-soft)}
+.ring+.ring,.ring .ring{margin-top:12px}
+.ring>b{font:700 18px/1.2 var(--font-display);color:var(--hq)}
+.ring>span{display:block;font-size:14.5px;color:var(--muted);margin-top:2px}
+.ring.core{background:var(--hq);border-color:var(--hq);text-align:center;padding:22px}
+.ring.core>b{color:var(--surface);font-size:22px}
+.ring.core>span{color:var(--surface);opacity:.85}
+.ring-note{margin:16px 0 0;font-size:15px;color:var(--muted)}
+.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:15px;line-height:1.4}
+.tbl th{text-align:left;font:600 12px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 12px 10px;border-bottom:2px solid var(--line)}
+.tbl td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl td:first-child{font-weight:650;width:24%}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .risk{color:var(--muted)}
+.tiers{display:grid;gap:12px}
+.tier{display:grid;grid-template-columns:170px 1fr;gap:18px;padding:16px 18px;border-radius:16px;background:var(--pt);border:2px solid var(--pb)}
+.tier b{font:750 21px/1.1 var(--font-display);color:var(--pc)}
+.tier .ex{font-size:15px;margin-bottom:6px}
+.tier .ctl{font-size:14.5px;color:var(--muted)}
+.life{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.life li{display:grid;grid-template-columns:44px 1fr;gap:14px;position:relative;padding-bottom:16px}
+.life li:not(:last-child)::before{content:"";position:absolute;left:21px;top:42px;bottom:2px;width:3px;border-radius:2px;background:var(--line)}
+.life .n{width:44px;height:44px;border-radius:50%;background:var(--hq-soft);color:var(--hq);display:grid;place-items:center;font:700 15px var(--font-mono)}
+.life b{display:block;font:700 19px/1.2 var(--font-display);margin-top:9px}
+.life span{font-size:15px;color:var(--muted)}
+.acc{width:100%;border-collapse:separate;border-spacing:6px;font-size:14px;margin:-6px}
+.acc th{font:600 11.5px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 4px 4px;vertical-align:bottom}
+.acc td{padding:9px 10px;border-radius:10px;font-weight:600;line-height:1.25;vertical-align:middle}
+.acc td.role{font:700 15px/1.2 var(--font-display);padding-left:4px}
+:is(.acc,.acc-key) .admin{background:oklch(var(--tL) calc(var(--tC) + .04) 27);color:oklch(var(--iL) var(--iC) 27)}
+:is(.acc,.acc-key) .jit{background:oklch(var(--tL) calc(var(--tC) + .04) 75);color:oklch(var(--iL) var(--iC) 75)}
+:is(.acc,.acc-key) .tool{background:oklch(var(--tL) calc(var(--tC) + .04) 250);color:oklch(var(--iL) var(--iC) 250)}
+:is(.acc,.acc-key) .scoped{background:oklch(var(--tL) calc(var(--tC) + .04) 155);color:oklch(var(--iL) var(--iC) 155)}
+:is(.acc,.acc-key) .none{background:var(--surface-2);color:var(--muted);font-weight:500}
+.acc-key{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:20px;font-size:14px;color:var(--muted)}
+.acc-key span b{display:inline-block;padding:3px 8px;border-radius:7px;margin-right:6px;font-size:12.5px}
+.leaks{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px}
+.lgroup h4{margin:0 0 8px;font:600 12px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--hq)}
+.lgroup ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.lgroup li{padding:12px 14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line)}
+.lgroup li b{display:block;font-size:15.5px;line-height:1.3}
+.lgroup li span{display:block;font-size:14px;color:var(--muted);margin-top:3px}
+.lgroup li span::before{content:"Fix: ";font-weight:700;color:var(--ink)}
+
+@media (max-width:760px){
+  #nav{width:auto;right:calc(16px + env(safe-area-inset-right,0px))}
+  #nav.collapsed{right:auto}
+  #nav.collapsed .nav-head p{display:none}
+  #tools{left:calc(16px + env(safe-area-inset-left,0px));top:calc(80px + env(safe-area-inset-top,0px));max-width:none;flex-wrap:nowrap;flex-direction:column;align-items:stretch}
+  .search{flex:none}
+  #lenses{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+  #nav:not(.collapsed)~#tools{display:none}
+  #mini{display:none}
+  body.panel-open #dock{right:calc(16px + env(safe-area-inset-right,0px))}
+  #panel{left:calc(16px + env(safe-area-inset-left,0px));width:auto;top:28%;transform:translateY(calc(100% + 40px))}
+  #hint{display:none}
+}
+/* ---------- live project state ---------- */
+.item.st-doing .chk{border-color:var(--doing);box-shadow:inset 0 0 0 4px var(--surface),inset 0 0 0 11px var(--doing)}
+.item.st-na{opacity:.5}
+.item.st-na .chk{border-style:dashed}
+.item.st-na .open{text-decoration:line-through;color:var(--muted)}
+.tg.doing{color:oklch(var(--iL) .12 72)}
+.tg.na{color:var(--muted)}
+.tg.mine{color:var(--accent)}
+.tg.nt{color:var(--pi)}
+.item.mine{border-style:dashed;border-color:var(--pb)}
+.tnode.mine{border-style:dashed}
+.lod-mid .item.st-doing,.lod-far .item.st-doing{background-color:var(--surface);background-image:linear-gradient(var(--doing),var(--doing)),linear-gradient(var(--line),var(--line)),linear-gradient(var(--line),var(--line))}
+.lod-mid .item.st-na,.lod-far .item.st-na{opacity:.3}
+.pstat{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);margin:4px 0 14px}
+.pstat button{min-height:34px;border:0;border-radius:9px;background:transparent;font:600 12px/1.15 var(--font-body);color:var(--muted);cursor:pointer;padding:4px 2px}
+.pstat button:hover:not(:disabled){color:var(--ink)}
+.pstat button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm)}
+.pstat button[data-st="done"][aria-pressed="true"]{background:var(--pc);color:var(--surface)}
+.pstat button[data-st="doing"][aria-pressed="true"]{background:var(--doing);color:oklch(0.25 0.05 72)}
+.pstat button:disabled{cursor:default}
+.pnote{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface-2);display:grid;gap:8px;margin:0 0 6px}
+.pnote-h{display:flex;justify-content:space-between;gap:8px;font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.pnote-h span:last-child{text-transform:none;letter-spacing:0;font-weight:500}
+.pnote textarea{width:100%;box-sizing:border-box;min-height:74px;resize:vertical;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font:400 14px/1.45 var(--font-body);color:var(--ink);background:var(--surface)}
+.pnote textarea:focus{outline:2px solid var(--accent);outline-offset:0}
+.pnote .ro{white-space:pre-wrap;font-size:14px;margin:0}
+.pnote .ref{font:500 12px/1.4 var(--font-mono);color:var(--muted);overflow-wrap:anywhere;margin:0}
+.pnote .row{display:flex;justify-content:flex-end}
+.pnote .row button{height:32px;padding:0 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font:600 12.5px var(--font-body);cursor:pointer}
+.mineflag{display:inline-block;margin:0 0 10px;font:600 11px var(--font-mono);color:var(--accent);border:1px dashed var(--accent);border-radius:99px;padding:3px 8px}
+.about{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.plan,.log{list-style:none;margin:0 0 4px;padding:0;display:grid;gap:2px}
+.plan button,.log button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:auto 1fr;gap:3px 9px;padding:7px 10px;border-radius:10px;cursor:pointer}
+.plan button:hover,.log button:hover{background:var(--surface-2)}
+.plan button:focus-visible,.log button:focus-visible{outline:2.5px solid var(--accent)}
+.plan .pill{grid-row:1/3;align-self:start;font:700 10px/1 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 6px;border-radius:6px;background:var(--hq-soft);color:var(--hq);min-width:34px;text-align:center}
+.plan .pill.now{background:var(--doing);color:oklch(0.25 0.05 72)}
+.plan .tt,.log .tx{font:600 13px/1.3 var(--font-body);min-width:0;overflow-wrap:anywhere}
+.log .tx{font-weight:500}
+.plan .wh,.log .by{font:500 11px/1.3 var(--font-mono);color:var(--muted)}
+.log .tm{grid-row:1/3;font:600 10.5px/1.35 var(--font-mono);color:var(--muted);white-space:nowrap;padding-top:1px}
+.empty{padding:4px 10px 6px;font-size:12.5px;color:var(--muted)}
+.live{font:600 11px var(--font-mono)}
+.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;background:var(--muted);vertical-align:1px}
+.live[data-s="on"]::before{background:var(--live)}
+.live[data-s="slow"]::before{background:var(--doing)}
+.stsel{height:34px;border-radius:99px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 12.5px var(--font-body);padding:0 10px;cursor:pointer;max-width:100%}
+.ol-p{display:block;margin-top:3px;font:600 10.5px/1 var(--font-mono);color:var(--muted)}
+.ol-p:empty,.olabel.compact .ol-p{display:none}
+#toast{left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);padding:10px 16px;font:500 13px/1.4 var(--font-body);z-index:9;max-width:min(520px,calc(100vw - 32px))}
+/* ---------- brand, office screen, lock ---------- */
+.brand{width:34px;height:34px;flex:none}
+.navbtns{display:flex;gap:6px;flex-wrap:wrap;margin:10px 8px 0}
+.nbtn{min-height:32px;padding:4px 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font:600 12.5px/1.2 var(--font-body);cursor:pointer;color:var(--muted)}
+.nbtn:hover{color:var(--ink)}
+.nbtn[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+body.screen #hint{display:none}
+#lock{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:var(--canvas);
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.lockcard{width:min(420px,100%);box-sizing:border-box;background:var(--surface);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow-lg);padding:32px 28px 24px;display:grid;gap:12px;text-align:center;justify-items:center}
+.lockmark{width:84px;height:84px}
+.lockcard h1{margin:4px 0 0;font:750 28px/1.1 var(--font-display);letter-spacing:-.01em}
+.lockcard p{margin:0;color:var(--muted);font-size:14.5px;max-width:34ch}
+.lockrow{display:flex;gap:8px;width:100%;margin-top:6px}
+.lockrow input{flex:1;min-width:0;height:46px;box-sizing:border-box;border-radius:12px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);font:500 16px var(--font-body);padding:0 14px}
+.lockrow input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.lockrow button{height:46px;padding:0 18px;border-radius:12px;border:0;background:var(--ink);color:var(--surface);font:650 15px var(--font-body);cursor:pointer}
+.lockrow button:disabled{opacity:.6;cursor:default}
+.lockcard .lockmsg{min-height:1.4em;color:var(--must);font-weight:600}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.lockmark.word{width:240px;height:auto}
+.cal{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-2px}
+.ol-n .cal{width:21px;height:21px}
+/* ---------- roadmap: the plan's dates as a timeline, above Security HQ ---------- */
+.roadmap{position:absolute;box-sizing:border-box;background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:30px 36px 24px;box-shadow:var(--shadow)}
+.roadmap[hidden]{display:none}
+.rm-head{display:flex;justify-content:space-between;align-items:flex-end;gap:32px;margin:0 0 22px}
+.rm-head .kicker{font:600 13px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.rm-head h2{margin:8px 0 6px;font:750 48px/1.02 var(--font-display);letter-spacing:-.02em;display:flex;gap:14px;align-items:center}
+.rm-head h2 img{width:52px;height:52px;flex:none}
+.rm-head .sub{margin:0;color:var(--muted);font-size:16px;max-width:72ch}
+.rm-stats{display:flex;gap:12px;flex:none;align-items:stretch}
+.rm-stat{width:220px;box-sizing:border-box;padding:12px 16px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.rm-stat>span{font:500 13px/1.3 var(--font-body);color:var(--muted);overflow-wrap:anywhere}
+.rm-stat>span:first-child{font:600 11px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+.rm-stat b{font:750 32px/1 var(--font-display);letter-spacing:-.01em}
+.rm-stat.big{width:auto;min-width:150px}
+.rm-counts{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.rm-chart{position:relative}
+.rm-month{position:absolute;top:28px;height:28px;box-sizing:border-box;padding-left:8px;border-left:2px solid var(--ink);font:700 16px/28px var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rm-week{position:absolute;top:56px;padding-left:5px;font:500 12px/24px var(--font-mono);color:var(--muted)}
+.rm-vl{position:absolute;width:0;border-left:1px solid var(--line);z-index:1;pointer-events:none}
+.rm-vl.m{border-left:2px solid color-mix(in oklch,var(--ink) 30%,transparent)}
+.rm-past{position:absolute;z-index:1;pointer-events:none;background:color-mix(in oklch,var(--canvas) 55%,transparent)}
+.rm-break{position:absolute;z-index:1;pointer-events:none;border-radius:10px;background:repeating-linear-gradient(135deg,color-mix(in oklch,var(--muted) 16%,transparent) 0 6px,transparent 6px 14px)}
+.rm-break span{display:block;margin:4px;padding:3px 4px;border-radius:6px;background:var(--surface);text-align:center;font:600 11.5px/1.25 var(--font-mono);color:var(--muted)}
+.rm-today{position:absolute;width:0;border-left:3px solid var(--accent);z-index:3;pointer-events:none}
+.rm-today span{position:absolute;top:0;left:0;transform:translateX(-50%);white-space:nowrap;font:700 11.5px/1 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--surface);background:var(--accent);border-radius:99px;padding:6px 10px}
+.rm-lane{position:absolute;left:0;width:100%;border-radius:16px;background:color-mix(in oklch,var(--pt) 70%,transparent)}
+.rm-ln{position:absolute;left:14px;top:0;height:34px;display:flex;gap:8px;align-items:center;font:700 12.5px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--pi)}
+.rm-ln i{width:12px;height:12px;border-radius:4px;background:var(--pc)}
+.rm-ln span{font-weight:500;color:var(--muted)}
+.rm-row{all:unset;position:absolute;left:0;width:100%;box-sizing:border-box;border-radius:12px;cursor:pointer;z-index:2}
+.rm-row:hover{background:color-mix(in oklch,var(--surface) 65%,transparent)}
+.rm-row:focus-visible{outline:2.5px solid var(--accent);outline-offset:-2px}
+.rm-row.sel{background:var(--surface);box-shadow:inset 0 0 0 2px var(--pc)}
+.rm-tt{position:absolute;left:14px;top:0;bottom:0;display:flex;gap:10px;align-items:center}
+.rm-t{flex:1;min-width:0;font:600 16px/1.2 var(--font-body);color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rm-pr{flex:none;font:600 12px var(--font-mono);color:var(--pi);font-variant-numeric:tabular-nums}
+.rm-bar{position:absolute;top:50%;height:24px;margin-top:-12px;box-sizing:border-box;border-radius:99px;border:2px solid var(--pc);background:var(--surface);overflow:hidden}
+.rm-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--pc)}
+.rm-ms{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;box-sizing:border-box;transform:rotate(45deg);border-radius:4px;border:3px solid var(--pc);background:var(--surface)}
+.rm-dt{position:absolute;top:0;bottom:0;display:flex;align-items:center;white-space:nowrap;font:600 13px var(--font-mono);color:var(--pi)}
+.rm-dt.l{transform:translateX(-100%)}
+.rm-row.now .rm-bar,.rm-row.now .rm-ms{box-shadow:0 0 0 4px color-mix(in oklch,var(--doing) 65%,transparent)}
+.rm-row.later .rm-bar{border-style:dashed}
+.rm-row.done .rm-ms{background:var(--pc)}
+.rm-row.done .rm-t{color:var(--muted)}
+.rm-row.late .rm-bar,.rm-row.late .rm-ms{border-color:var(--must)}
+.rm-pill{display:inline-block;flex:none;min-width:48px;box-sizing:border-box;text-align:center;font:700 10.5px/1 var(--font-mono);font-style:normal;letter-spacing:.06em;text-transform:uppercase;padding:5px 7px;border-radius:6px;background:var(--hq-soft);color:var(--hq)}
+.rm-pill.now{background:var(--doing);color:oklch(0.25 0.05 72)}
+.rm-pill.done{background:var(--live);color:oklch(0.22 0.05 150)}
+.rm-pill.late{background:var(--must);color:var(--surface)}
+.rm-pill.later{background:var(--surface-2);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)}
+.rm-key{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;margin-top:18px;font-size:13.5px;color:var(--muted)}
+.rm-key>span{display:inline-flex;gap:8px;align-items:center}
+.rm-kd{width:13px;height:13px;transform:rotate(45deg);border-radius:3px;border:2.5px solid var(--accent);box-sizing:border-box}
+.rm-kb{width:46px;height:14px;border-radius:99px;border:2px solid var(--accent);box-sizing:border-box;background:linear-gradient(90deg,var(--accent) 45%,var(--surface) 45%)}
+.lod-far .roadmap>*{visibility:hidden}
+.lod-far .roadmap{background:var(--hq-soft);border-color:transparent;box-shadow:none}
+.olabel.rml{--pc:var(--accent);--pt:var(--hq-soft)}
+#steps a.rmlink{--pc:var(--accent);--pb:var(--hq-soft);--pt:var(--hq-soft)}
+/* the detail panel for a roadmap item: its dates, why, and its checks to tick */
+#panel.planmode .p-foot{display:none}
+.pplan{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin:0 0 14px;font:600 12.5px/1.4 var(--font-mono);color:var(--muted)}
+.pchecks{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.pchecks li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.pc-chk{width:26px;height:26px;border-radius:50%;border:2px solid var(--pb);background:var(--surface);display:grid;place-items:center;cursor:pointer;padding:0}
+.pc-chk:disabled{cursor:default}
+.pc-chk svg{width:13px;height:13px;stroke:var(--surface);stroke-width:3.2;fill:none;opacity:0}
+.pchecks li.done .pc-chk{background:var(--pc);border-color:var(--pc)}
+.pchecks li.done .pc-chk svg{opacity:1}
+.pchecks li.doing .pc-chk{border-color:var(--doing);box-shadow:inset 0 0 0 3px var(--surface),inset 0 0 0 9px var(--doing)}
+.pchecks li.na{opacity:.55}
+.pc-open{all:unset;cursor:pointer;display:grid;gap:2px;min-width:0}
+.pc-open span{font:600 14px/1.3 var(--font-body);overflow-wrap:anywhere}
+.pchecks li.done .pc-open span{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--pb)}
+.pc-open small{font:500 11px var(--font-mono);color:var(--muted)}
+.pc-open:focus-visible{outline:2.5px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (max-width:1279px){body.panel-open #mini{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="viewport" aria-label="Blueprint board. Drag to move, scroll or pinch to zoom.">
+  <div id="board" class="lod-near"><svg id="wires" aria-hidden="true"></svg></div>
+  <div id="labels"></div>
+</div>
+
+<aside id="nav" class="float" aria-label="Steps">
+  <div class="nav-head">
+    <button id="navToggle" class="ibtn" aria-expanded="true" aria-controls="navBody" aria-label="Hide the step list">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    </button>
+    <img class="brand" src="icon.png" alt="Supreme">
+    <div><h1 id="navTitle">One Supreme Blueprint</h1><p><span id="live" class="live" data-s="off">connecting</span> · <span id="navSub">idea → hardened, maintained app</span></p></div>
+  </div>
+  <div id="navBody">
+    <div class="overall"><div class="row"><span>Done</span><span id="ovCount">0 / 0</span></div><div class="bar"><i id="ovBar"></i></div><p id="about" class="about" hidden></p></div>
+    <div class="navsec">Now &amp; next</div>
+    <ol id="planList" class="plan"></ol>
+    <div class="navsec">Latest</div>
+    <ol id="logList" class="log"></ol>
+    <div class="navsec">Steps</div>
+    <ol id="steps"></ol>
+    <div class="navsec">Lenses</div>
+    <div class="legend" id="legend"></div>
+    <div class="navsec">Moving around</div>
+    <div class="keys">
+      <kbd>Drag</kbd><span>Move the board</span>
+      <kbd>Wheel</kbd><span>Zoom (trackpad: pinch)</span>
+      <kbd>/</kbd><span>Search</span>
+      <kbd>F</kbd><span>Fit everything</span>
+      <kbd>← →</kbd><span>Previous / next check</span>
+      <kbd>Esc</kbd><span>Close details</span>
+    </div>
+    <p class="note" id="syncNote">Ticks, notes and the plan are shared with ONE SUPREME.</p>
+    <div class="navbtns">
+      <button type="button" id="screenBtn" class="nbtn" aria-pressed="false">Office screen mode</button>
+      <button type="button" id="lockBtn" class="nbtn" hidden>Lock this screen</button>
+    </div>
+  </div>
+</aside>
+
+<div id="tools" class="float" role="search">
+  <label class="search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" placeholder="Search every check…" autocomplete="off" spellcheck="false" aria-label="Search the blueprint">
+    <span id="qcount" aria-live="polite"></span>
+    <button class="qnav" id="qPrev" type="button" aria-label="Previous match"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button>
+    <button class="qnav" id="qNext" type="button" aria-label="Next match"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>
+  </label>
+  <div id="lenses" role="group" aria-label="Highlight a lens"></div>
+  <select id="stf" class="stsel" aria-label="Show checks by status">
+    <option value="">All checks</option><option value="open">Still to do</option><option value="doing">In progress</option>
+    <option value="done">Done</option><option value="na">Not needed</option><option value="mine">One Supreme's own</option>
+  </select>
+</div>
+
+<div id="dock" class="float">
+  <canvas id="mini" aria-label="Mini map. Click to jump."></canvas>
+  <div class="zoom">
+    <button class="ibtn" id="zOut" type="button" aria-label="Zoom out"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <span id="zPct">100%</span>
+    <button class="ibtn" id="zIn" type="button" aria-label="Zoom in"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="ibtn" id="zFit" type="button">Fit all</button>
+  </div>
+</div>
+
+<aside id="panel" class="float" aria-hidden="true" aria-labelledby="pTitle">
+  <div class="p-head"><div class="crumb hue" id="pCrumb"></div>
+    <button class="ibtn" id="pClose" type="button" aria-label="Close details"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="p-body" id="pBody"></div>
+  <div class="p-foot">
+    <button class="pbtn" id="pPrev" type="button" aria-label="Previous check">←</button>
+    <button class="pbtn" id="pDone" type="button" aria-pressed="false">Mark as done</button>
+    <button class="pbtn" id="pNext" type="button" aria-label="Next check">→</button>
+  </div>
+</aside>
+
+<div id="hint" class="float"><b>Drag</b> to move · <b>scroll or pinch</b> to zoom · <b>click</b> any card · <b>/</b> to search</div>
+<div id="toast" class="float" role="status" aria-live="polite" hidden></div>
+<div id="lock" hidden>
+  <form id="lockForm" class="lockcard">
+    <picture><source srcset="logo-white.png" media="(prefers-color-scheme: dark)"><img class="lockmark word" src="logo.png" alt="Supreme Imports"></picture>
+    <h1>One Supreme Blueprint</h1>
+    <p>Enter the passcode to open the board. This screen remembers it.</p>
+    <label for="lockKey" class="sr">Passcode</label>
+    <div class="lockrow"><input id="lockKey" name="passcode" type="password" autocomplete="current-password" placeholder="Passcode" required><button type="submit" id="lockGo">Unlock</button></div>
+    <p id="lockMsg" class="lockmsg" role="alert"></p>
+  </form>
+</div>
+
+<script>
+window.BP = { phases: [] };
+/* ---------- lenses ---------- */
+BP.tags = {
+  must:   { label: "Must before launch",       short: "Must",   chip: "Must-do",         glyph: "!" },
+  sec:    { label: "Safety feature",           short: "Safety", chip: "Safety features", glyph: "■" },
+  data:   { label: "Data storage & privacy",   short: "Data",   chip: "Data",            glyph: "◆" },
+  access: { label: "Who has access",           short: "Access", chip: "Access",          glyph: "●" },
+  leak:   { label: "Leak prevention",          short: "Leak",   chip: "Leaks",           glyph: "▲" }
+};
+
+/* ---------- 01 ---------- */
+BP.phases.push({ k: "idea", h: 20, t: "Idea & validation",
+  b: "Prove the problem is real before writing code, and spot early which data the idea will need.",
+  topics: [
+  { t: "Define the problem", items: [
+    { t: "Write a one-line problem statement", s: "Who has the problem, how often it hurts, and what they do about it today.",
+      d: "If you can't say it in one sentence, it will be hard to build and harder to sell. Name the user, the pain and today's workaround.",
+      h: ["Fill in: “For [who], who struggle with [pain], [app] lets them [outcome].”", "List the workaround people use now (spreadsheets, WhatsApp, paper)", "Write down what would make them switch"],
+      l: [["How to get startup ideas (Paul Graham)", "https://paulgraham.com/startupideas.html"]] },
+    { t: "List your users and roles", s: "Customer, admin, staff, partner. Every role becomes an access rule later.",
+      d: "The roles you list now become your permission model in step 06. Note who should see whose data, and who must never see it.", g: "access" },
+    { t: "Sketch the core user journey", s: "Map the 3–5 screens that deliver the main value. Ignore everything else for now.",
+      l: [["Excalidraw (free whiteboard)", "https://excalidraw.com/"], ["Figma", "https://www.figma.com/"]] },
+    { t: "Name the moment of value", s: "The point where a user first gets what they came for. Design everything to reach it fast." }
+  ]},
+  { t: "Validate demand", items: [
+    { t: "Talk to 10+ potential users", s: "Ask about what they did last time, not whether they'd like your idea.",
+      d: "People are polite about ideas and honest about their past. Ask about real recent events, what it cost them, and what they tried.",
+      l: [["The Mom Test", "https://www.momtestbook.com/"]] },
+    { t: "Check the market", s: "Search trends, competitor reviews and communities show whether people pay to solve this.",
+      l: [["Google Trends", "https://trends.google.com/"], ["Product Hunt", "https://www.producthunt.com/"]] },
+    { t: "Run a smoke test", s: "A landing page with a waitlist measures real intent cheaply.",
+      d: "Collect only an email address. A waitlist is already personal data: keep it with a reputable provider and say how you'll use it.", g: "data" },
+    { t: "Fill in a Lean Canvas", s: "One page: problem, customers, value, channels, costs and revenue.",
+      l: [["Lean Canvas", "https://leanstack.com/lean-canvas"]] }
+  ]},
+  { t: "Spot the risk early", items: [
+    { t: "List the data the idea needs", s: "Write down every piece of personal data the app would collect or touch.",
+      d: "Health, money, location, children, ID documents and biometrics raise the stakes and the legal duties a lot. Spotting them now changes the architecture, hosting and budget.", g: "data must" },
+    { t: "Check for regulated territory", s: "Payments, health, finance, children or EU users each bring their own rules.",
+      d: "PCI DSS for cards, HIPAA for US health data, GDPR for anyone in the EU or UK, COPPA for under-13s in the US, DORA for EU financial firms. Knowing early avoids a rebuild.",
+      l: [["EU data protection overview", "https://commission.europa.eu/law/law-topic/data-protection_en"]], g: "data" },
+    { t: "Decide what you will not collect", s: "Data you never store can't leak. Cut every field that isn't essential.", g: "data leak" },
+    { t: "Write your trust promise", s: "One sentence users can rely on, e.g. “We never sell or share your data.”",
+      d: "It becomes the test for every later privacy decision and the heart of your privacy policy.", g: "data" }
+  ]},
+  { t: "Scope the first version", items: [
+    { t: "Choose web, mobile or both", s: "A responsive web app is usually the fastest and cheapest first release.",
+      d: "Native mobile adds app-store review, on-device storage risks and slower fixes. A progressive web app covers many cases." },
+    { t: "Cut to one core workflow", s: "Ship the smallest thing that delivers the moment of value." },
+    { t: "Set success metrics", s: "Two or three numbers that prove it works, such as weekly active users or retention." },
+    { t: "Budget for security, not just build", s: "Include hosting, tools, legal review and an external security test.", g: "sec" }
+  ]}
+]});
+
+/* ---------- 02 ---------- */
+BP.phases.push({ k: "plan", h: 44, t: "Plan & threat model",
+  b: "Turn the idea into requirements and decide up front what you're protecting, and from whom.",
+  topics: [
+  { t: "Requirements", items: [
+    { t: "Write user stories with abuse cases", s: "Next to each “As a user I can…”, add “As an attacker I try to…”.",
+      d: "Abuse cases surface security requirements early, e.g. “As an attacker I change the ID in the URL to read other people's invoices.”",
+      l: [["OWASP Abuse Case Cheat Sheet", "https://cheatsheetseries.owasp.org/cheatsheets/Abuse_Case_Cheat_Sheet.html"]], g: "sec" },
+    { t: "Pick a security baseline", s: "OWASP ASVS Level 1 at minimum; Level 2 for any app holding personal data.",
+      d: "ASVS is a checklist of testable security requirements. Use it as your definition of ‘secure enough’ and as the scope for testers later.",
+      l: [["OWASP ASVS", "https://owasp.org/www-project-application-security-verification-standard/"], ["OWASP MASVS (mobile)", "https://mas.owasp.org/MASVS/"]], g: "sec must" },
+    { t: "Set uptime and recovery targets", s: "How long can you be down (RTO)? How much data can you lose (RPO)?",
+      d: "RPO of 1 hour means backups at least hourly. RTO of 4 hours means you can rebuild in 4 hours. These numbers drive hosting and backup choices.", g: "data" },
+    { t: "Plan accessibility from day one", s: "WCAG 2.2 AA is the common bar and a legal duty in many markets.",
+      l: [["WCAG overview (W3C)", "https://www.w3.org/WAI/standards-guidelines/wcag/"]] }
+  ]},
+  { t: "Threat model", items: [
+    { t: "Draw a data-flow diagram", s: "Boxes for users, app, database and vendors; arrows for data; dashed lines for trust boundaries.",
+      d: "Every arrow that crosses a trust boundary (internet to app, app to vendor) is where attacks happen. Mark which arrows carry personal data.",
+      l: [["OWASP Threat Dragon", "https://owasp.org/projects/threat-dragon"]], g: "data sec" },
+    { t: "Ask the four questions", s: "What are we building? What can go wrong? What will we do about it? Did we do a good job?",
+      l: [["Threat Modeling Manifesto", "https://www.threatmodelingmanifesto.org/"]], g: "sec" },
+    { t: "Apply STRIDE to each arrow", s: "Spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege.",
+      l: [["Microsoft Threat Modeling Tool", "https://learn.microsoft.com/en-us/azure/security/develop/threat-modeling-tool"]], g: "sec" },
+    { t: "Know who your attackers are", s: "Bots, curious users, ex-staff, competitors and criminals each need different defences.", g: "sec access" },
+    { t: "Rank risks and assign owners", s: "Likelihood times impact. Fix the top risks by design and write down the ones you accept.",
+      d: "Keep a simple risk register: risk, impact, likelihood, fix, owner, status. Revisit it every major release.", g: "sec" }
+  ]},
+  { t: "Secure development process", items: [
+    { t: "Adopt a secure development framework", s: "NIST SSDF or OWASP SAMM gives you a checklist for the whole lifecycle.",
+      l: [["NIST SSDF (SP 800-218)", "https://csrc.nist.gov/projects/ssdf"], ["OWASP SAMM", "https://owaspsamm.org/"]], g: "sec" },
+    { t: "Make security part of ‘done’", s: "No feature ships without review, tests and a security check.", g: "sec" },
+    { t: "Name a security owner", s: "One person is accountable for security decisions, even part-time.", g: "sec access" }
+  ]},
+  { t: "Project setup", items: [
+    { t: "Choose a home for tasks and docs", s: "One place for tasks, decisions and runbooks.",
+      l: [["GitHub Projects", "https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects"], ["Linear", "https://linear.app/"]] },
+    { t: "Record architecture decisions", s: "Short ADRs explain why you chose a host, database or login provider.",
+      l: [["ADR templates", "https://adr.github.io/"]] },
+    { t: "Pick a release rhythm", s: "Small, frequent releases are easier to test, review and roll back." }
+  ]}
+]});
+
+/* ---------- 03 ---------- */
+BP.phases.push({ k: "resources", h: 68, t: "Resources & accounts",
+  b: "Gather people, tools and accounts, and lock every account down before it holds anything valuable.",
+  topics: [
+  { t: "People & ownership", items: [
+    { t: "Decide: build, hire or no-code", s: "Founder-built, agency, freelancers or no-code. Each changes who holds the keys.",
+      d: "Whoever builds it gets access to code, servers and data. Make sure contracts give the company ownership of code, accounts and IP.", g: "access" },
+    { t: "Get IP and confidentiality in writing", s: "Code, designs and accounts belong to the company, not the contractor.", g: "access" },
+    { t: "Plan onboarding and offboarding", s: "A checklist for granting and revoking access, written before the first hire.", g: "access leak" }
+  ]},
+  { t: "Lock down accounts", items: [
+    { id: "pwm", t: "Use a team password manager", s: "Unique generated passwords and shared vaults. No passwords in chat, email or docs.",
+      l: [["Bitwarden", "https://bitwarden.com/"], ["1Password", "https://1password.com/"]], g: "access leak must" },
+    { id: "mfa", t: "Turn on strong MFA everywhere", s: "Security keys or passkeys for email, cloud, code host, domain registrar and app stores.",
+      d: "SMS codes can be stolen by SIM swapping. Phishing-resistant factors (FIDO2 security keys, passkeys) stop most account takeovers. Register two keys per person and keep backup codes offline.",
+      h: ["Start with email: whoever owns your email can reset everything else", "Then cloud, code host, registrar, DNS, payments and app stores", "Enforce MFA at organisation level so nobody can skip it"],
+      l: [["YubiKey", "https://www.yubico.com/"], ["passkeys.dev", "https://passkeys.dev/"]], g: "access must" },
+    { t: "Use company-owned accounts only", s: "Register cloud, domain, stores and email to the company, never a personal login.",
+      d: "Personal accounts leave with the person. Use role addresses (admin@, security@) owned by the business.", g: "access must" },
+    { t: "Create a break-glass account", s: "One emergency admin login protected by a hardware key, stored sealed and monitored.", g: "access" },
+    { t: "Secure every work device", s: "Disk encryption, automatic updates, screen lock and a current browser on each laptop.", g: "sec leak must" }
+  ]},
+  { t: "Domain & email", items: [
+    { t: "Register your domain securely", s: "Registrar lock, MFA and auto-renew on. An expired domain can be taken over.",
+      l: [["Cloudflare Registrar", "https://www.cloudflare.com/domains/"], ["Porkbun", "https://porkbun.com/"]], g: "sec must" },
+    { t: "Set up SPF, DKIM and DMARC", s: "Stops others sending email that looks like it came from you.",
+      l: [["DMARC.org", "https://dmarc.org/"], ["MxToolbox checks", "https://mxtoolbox.com/"]], g: "sec leak" },
+    { t: "Turn on DNSSEC", s: "Protects your DNS records from being forged.",
+      l: [["How DNSSEC works (Cloudflare)", "https://www.cloudflare.com/learning/dns/dnssec/how-dnssec-works/"]], g: "sec" },
+    { t: "Create security@ and support@", s: "Role inboxes that survive staff changes and can receive vulnerability reports.", g: "sec" }
+  ]},
+  { t: "Tools & budget", items: [
+    { t: "Set up your code host", s: "GitHub or GitLab organisation with MFA required and no more than two owners.",
+      l: [["GitHub", "https://github.com/"], ["GitLab", "https://about.gitlab.com/"], ["GitHub org security", "https://docs.github.com/en/organizations/keeping-your-organization-secure"]], g: "access" },
+    { t: "Claim startup credits", s: "Cloud providers give free credits to new companies.",
+      l: [["AWS Activate", "https://aws.amazon.com/startups/credits"], ["Google for Startups Cloud", "https://cloud.google.com/startup"], ["Microsoft for Startups", "https://www.microsoft.com/en-us/startups"]] },
+    { t: "Set billing alerts and spend caps", s: "A leaked key often shows up first as a surprise bill.", g: "leak sec" },
+    { t: "Keep an inventory of every service", s: "One list of every tool and account: owner, purpose, what data it holds.", g: "data access" }
+  ]}
+]});
+
+/* ---------- 04 ---------- */
+BP.phases.push({ k: "architecture", h: 92, t: "Architecture & stack",
+  b: "Choose boring, well-supported building blocks, and design so that one failure can't expose everything.",
+  topics: [
+  { t: "Principles", items: [
+    { t: "Prefer managed, boring tech", s: "Popular frameworks and managed services get patched faster than anything custom.", g: "sec" },
+    { t: "Follow the Twelve-Factor App", s: "Config in the environment, stateless processes, disposable servers.",
+      l: [["12factor.net", "https://12factor.net/"]] },
+    { t: "Read a cloud security pillar", s: "Free, vendor-written checklists for secure cloud design.",
+      l: [["AWS Well-Architected: Security", "https://docs.aws.amazon.com/wellarchitected/latest/security-pillar/welcome.html"], ["Azure Well-Architected", "https://learn.microsoft.com/en-us/azure/well-architected/"], ["Google Cloud Architecture Framework", "https://cloud.google.com/architecture/framework"]], g: "sec" },
+    { t: "Keep the attack surface small", s: "Fewer services, ports, packages and admin screens mean fewer ways in.", g: "sec leak" }
+  ]},
+  { t: "Choose the stack", items: [
+    { t: "Frontend framework", s: "Next.js, Nuxt or SvelteKit for web; Flutter or React Native for mobile.",
+      d: "Pick what your team knows well. Frameworks that escape output by default (React, Vue, Svelte, Angular) prevent most cross-site scripting.",
+      l: [["Next.js", "https://nextjs.org/"], ["SvelteKit", "https://svelte.dev/"], ["Flutter", "https://flutter.dev/"]] },
+    { t: "Backend and API style", s: "REST or GraphQL on a mainstream framework, or a backend-as-a-service.",
+      l: [["OWASP API Security Top 10", "https://owasp.org/API-Security/"]], g: "sec" },
+    { t: "Database type", s: "PostgreSQL fits most apps: constraints, transactions and row-level security built in.",
+      l: [["PostgreSQL", "https://www.postgresql.org/"]], g: "data" },
+    { t: "Backend-as-a-service, carefully", s: "Supabase, Firebase or Appwrite are fast, but their security rules become your firewall.",
+      d: "With a BaaS the browser talks to the database directly. If row-level security or security rules are missing, anyone with your public key can read everything.",
+      l: [["Supabase", "https://supabase.com/"], ["Firebase", "https://firebase.google.com/"], ["Appwrite", "https://appwrite.io/"]], g: "data access" }
+  ]},
+  { t: "Design for containment", items: [
+    { t: "Separate dev, staging and production", s: "Different accounts, databases and keys. Staging never holds real customer data.", g: "access leak must" },
+    { id: "dbpriv", t: "Keep the database on a private network", s: "No public IP on the database. Only the app servers can reach it.",
+      d: "Exposed databases are found by scanners within hours. Use private networking, security groups that allow only the app, and a bastion or zero-trust tunnel for humans.", g: "data sec must" },
+    { t: "Split admin from the public app", s: "Admin tools on their own domain, behind SSO and a zero-trust proxy.", g: "access sec" },
+    { t: "Isolate each customer's data", s: "Every query is scoped to the account or organisation, enforced in the database where possible.",
+      d: "Options from cheapest to strongest: a tenant_id column with row-level security, a schema per tenant, a database per tenant.", g: "data access" },
+    { t: "Plan for failure", s: "Health checks, retries, timeouts and a second availability zone for anything critical." }
+  ]},
+  { t: "Document it", items: [
+    { t: "Draw the architecture (C4)", s: "Context, containers, components. Mark where data is stored and which links are encrypted.",
+      l: [["C4 model", "https://c4model.com/"]], g: "data" },
+    { t: "Map every third party", s: "List each vendor that receives data: what it gets, why, and where it stores it.", g: "data leak" },
+    { t: "Learn system design basics", s: "Caching, queues, replication and failure modes, explained with diagrams.",
+      l: [["System Design Primer", "https://github.com/donnemartin/system-design-primer"]] }
+  ]}
+]});
+
+/* ---------- 05 ---------- */
+BP.phases.push({ k: "data", h: 140, t: "Data storage & privacy",
+  b: "Decide what you collect, where it lives, how it's encrypted, who can read it and when it's deleted.",
+  topics: [
+  { t: "Classify & minimise", items: [
+    { t: "Build a data inventory", s: "A table of every field: what, why, where stored, who can read it, how long it's kept.",
+      d: "This doubles as your GDPR record of processing (Article 30) and is the map you'll need on the worst day of an incident.",
+      h: ["List every table, bucket, log and vendor that stores personal data", "Add purpose, legal basis, retention and owner to each row", "Review it whenever you add a feature or a vendor"], g: "data must" },
+    { t: "Assign sensitivity tiers", s: "Public, Internal, Confidential, Restricted. Controls get stricter with each tier.",
+      d: "See the classification poster in Security HQ for examples and required controls per tier.", g: "data" },
+    { t: "Collect the minimum", s: "Year of birth instead of birth date; city instead of street address.", g: "data leak" },
+    { t: "Pseudonymise analytics and logs", s: "Random IDs instead of emails or names wherever a person doesn't need to be identified.", g: "data leak" }
+  ]},
+  { t: "Where data lives", items: [
+    { t: "Choose the data region on purpose", s: "Host where your users are and where the law expects, e.g. EU users in the EU.",
+      d: "Check where backups, logs and every vendor's copy live too. Transfers out of the EU or UK need a legal basis such as the EU-US Data Privacy Framework or standard contractual clauses.", g: "data must" },
+    { t: "Use a managed database", s: "Managed Postgres handles patching, backups and encryption at rest for you.",
+      l: [["Supabase", "https://supabase.com/"], ["Neon", "https://neon.com/"], ["Amazon RDS", "https://aws.amazon.com/rds/"], ["Google Cloud SQL", "https://cloud.google.com/sql"]], g: "data" },
+    { t: "Put files in object storage", s: "User uploads go to S3-compatible storage, never to the web server's disk.",
+      l: [["Amazon S3", "https://aws.amazon.com/s3/"], ["Cloudflare R2", "https://www.cloudflare.com/products/r2/"], ["Backblaze B2", "https://www.backblaze.com/cloud-storage"]], g: "data" },
+    { t: "Block public bucket access", s: "Turn on account-wide ‘block public access’. Share private files with short-lived signed URLs.",
+      l: [["S3 Block Public Access", "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"]], g: "leak must data" },
+    { t: "Never store card numbers", s: "Let Stripe or another processor hold card data. You keep only a token.",
+      d: "Handling raw card numbers pulls you into full PCI DSS scope. Hosted checkout or embedded payment fields keep you out of most of it.",
+      l: [["Stripe", "https://stripe.com/"], ["PCI Security Standards", "https://www.pcisecuritystandards.org/"]], g: "data leak must" }
+  ]},
+  { t: "Encryption", items: [
+    { id: "tls", t: "Encrypt in transit everywhere", s: "HTTPS only, TLS 1.2 or newer, HSTS, and TLS between the app and its database too.",
+      l: [["Mozilla SSL Config Generator", "https://ssl-config.mozilla.org/"], ["Let's Encrypt", "https://letsencrypt.org/"]], g: "sec must data" },
+    { t: "Encrypt at rest with managed keys", s: "Disk, database and backup encryption on, with keys held in a cloud key service.",
+      l: [["AWS KMS", "https://aws.amazon.com/kms/"], ["Google Cloud KMS", "https://cloud.google.com/security/products/security-key-management"], ["Azure Key Vault", "https://azure.microsoft.com/en-us/products/key-vault"]], g: "data must" },
+    { t: "Encrypt the most sensitive fields", s: "Encrypt IDs, health data or tokens in the app, so a stolen database dump is useless.",
+      d: "Use envelope encryption: a data key per record or tenant, wrapped by a key in your key service. Use a vetted library, never a home-made cipher.",
+      l: [["OWASP Cryptographic Storage", "https://cheatsheetseries.owasp.org/cheatsheets/Cryptographic_Storage_Cheat_Sheet.html"], ["libsodium", "https://doc.libsodium.org/"]], g: "data sec" },
+    { t: "Hash passwords properly", s: "Argon2id, scrypt or bcrypt. Never store, encrypt or log plain passwords.",
+      l: [["OWASP Password Storage", "https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html"]], g: "data must sec" },
+    { t: "Plan key rotation", s: "Know how to rotate every key and secret without downtime, and do it on a schedule.", g: "data sec" }
+  ]},
+  { t: "Who can read the data", items: [
+    { t: "Use least-privilege database roles", s: "The app's database user can't drop tables. Migrations run as a separate role.", g: "access data must" },
+    { t: "Turn on row-level security", s: "The database itself makes sure each user only sees their own rows.",
+      l: [["PostgreSQL row security", "https://www.postgresql.org/docs/current/ddl-rowsecurity.html"], ["Supabase RLS guide", "https://supabase.com/docs/guides/database/postgres/row-level-security"]], g: "access data leak" },
+    { t: "Lock down BaaS security rules", s: "Firebase and Supabase projects can start wide open. Write and test rules before launch.",
+      l: [["Firebase Security Rules", "https://firebase.google.com/docs/rules"]], g: "leak must access" },
+    { t: "Return only the fields needed", s: "API responses use an explicit list of fields, never the whole database row.",
+      d: "Serialising a whole user object can leak password hashes, internal flags or other people's emails. Define response shapes on purpose.", g: "leak data" }
+  ]},
+  { t: "Keep, back up, delete", items: [
+    { t: "Set retention periods", s: "Each data type gets a lifespan; a scheduled job deletes or anonymises it on time.", g: "data leak" },
+    { t: "Let users export and delete", s: "Download my data, delete my account, and make backups age the deleted data out.",
+      l: [["Apple: account deletion rule (5.1.1)", "https://developer.apple.com/help/app-review/guideline-reference/5-1-1-account-deletion"]], g: "data must" },
+    { id: "backups", t: "Back up with the 3-2-1 rule", s: "3 copies, 2 kinds of storage, 1 off-site in a separate account. Encrypted and automatic.",
+      d: "Keep at least one copy that an attacker with your production credentials can't delete: a separate account, or immutable/object-lock storage.",
+      l: [["The 3-2-1 backup strategy", "https://www.backblaze.com/blog/the-3-2-1-backup-strategy/"]], g: "data must" },
+    { t: "Test a restore every quarter", s: "A backup you've never restored is a hope, not a backup.", g: "data" },
+    { t: "Use fake data outside production", s: "Seed dev and staging with generated data. Never copy production down.",
+      l: [["Faker", "https://fakerjs.dev/"]], g: "leak data" }
+  ]}
+]});
+
+/* ---------- 06 ---------- */
+BP.phases.push({ k: "access", h: 164, t: "Identity & access",
+  b: "Who can sign in, what each person and machine is allowed to do, and how you prove it.",
+  topics: [
+  { t: "User sign-in", items: [
+    { id: "authprov", t: "Use a proven login provider", s: "Don't build sign-in from scratch. Use a maintained service or framework.",
+      d: "Login, sessions, password reset and MFA are full of subtle traps. Providers handle breached-password checks, bot defence and passkeys for you.",
+      l: [["Auth0", "https://auth0.com/"], ["Clerk", "https://clerk.com/"], ["Supabase Auth", "https://supabase.com/auth"], ["Keycloak (self-hosted)", "https://www.keycloak.org/"]], g: "sec must access" },
+    { t: "Offer passkeys and MFA", s: "Passkeys resist phishing. Authenticator apps as a fallback; SMS only as a last resort.",
+      l: [["passkeys.dev", "https://passkeys.dev/"]], g: "sec access" },
+    { t: "Follow modern password rules", s: "Allow long passphrases, block known-breached passwords, no forced expiry.",
+      l: [["NIST SP 800-63B", "https://pages.nist.gov/800-63-4/sp800-63b.html"], ["Pwned Passwords", "https://haveibeenpwned.com/Passwords"]], g: "sec" },
+    { t: "Make recovery as strong as login", s: "Reset and email-change flows are the most attacked. Use single-use, expiring tokens.",
+      l: [["OWASP Forgot Password", "https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html"]], g: "sec must" },
+    { t: "Don't reveal which emails exist", s: "Same response for “wrong password” and “no such account”, on login, sign-up and reset.", g: "leak" }
+  ]},
+  { t: "Sessions & tokens", items: [
+    { t: "Keep sessions in secure cookies", s: "HttpOnly, Secure, SameSite cookies, not tokens in localStorage.",
+      d: "Anything in localStorage can be read by injected JavaScript. HttpOnly cookies can't.",
+      l: [["OWASP Session Management", "https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html"]], g: "sec leak" },
+    { t: "Keep tokens short-lived", s: "Access tokens last minutes, refresh tokens rotate, every session can be revoked.", g: "sec" },
+    { t: "Validate tokens strictly", s: "Check signature, algorithm, issuer, audience and expiry on every request.",
+      l: [["OWASP JWT Cheat Sheet", "https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html"]], g: "sec" },
+    { t: "Let users see and end sessions", s: "A device list with “sign out everywhere”. End all sessions when the password changes.", g: "sec access" }
+  ]},
+  { t: "Permissions (who can do what)", items: [
+    { id: "authz", t: "Check permission on every request", s: "On the server, for every endpoint and every object. Hiding a button isn't security.",
+      d: "Broken object-level authorisation (change /invoices/123 to /124 and see someone else's) is the top API risk. Deny by default and test it.",
+      h: ["Load the object, then check the signed-in user may act on it", "Put the check in one shared place, not in each handler", "Write a test per endpoint: user A can't touch user B's data"],
+      l: [["OWASP Authorization Cheat Sheet", "https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html"]], g: "access must leak" },
+    { t: "Model roles and permissions", s: "Start with simple roles; add attribute or relationship rules when you need them.",
+      l: [["OpenFGA", "https://openfga.dev/"], ["Cerbos", "https://www.cerbos.dev/"], ["Open Policy Agent", "https://www.openpolicyagent.org/"]], g: "access" },
+    { t: "Use unguessable IDs in URLs", s: "Random IDs make scraping harder, but never replace permission checks.", g: "leak access" },
+    { t: "Ask again before risky actions", s: "Re-check password or passkey before changing email, payout details or deleting data.", g: "sec access" }
+  ]},
+  { t: "Team & admin access", items: [
+    { t: "Grant least privilege", s: "Each person gets the minimum access for their job. Production access is the exception.",
+      l: [["AWS IAM best practices", "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html"]], g: "access must" },
+    { t: "Use single sign-on for internal tools", s: "One identity per person, MFA enforced centrally, one switch to revoke everything.", g: "access" },
+    { t: "Give production access just in time", s: "Time-limited, approved and logged access instead of standing admin rights.",
+      l: [["Teleport", "https://goteleport.com/"], ["Tailscale", "https://tailscale.com/"], ["Cloudflare Access", "https://www.cloudflare.com/sase/products/access/"]], g: "access sec" },
+    { t: "Build an audited admin panel", s: "Support works through a tool that masks data and records who viewed what.",
+      d: "Raw database access for support staff is a leak waiting to happen. An internal tool lets you mask fields, limit actions and keep an audit trail.", g: "access leak data" },
+    { t: "Offboard within hours", s: "A checklist that removes SSO, keys, repos, cloud and vendor access the same day.", g: "access must leak" },
+    { t: "Review access every quarter", s: "Owners confirm each person, key and integration still needs what it has.", g: "access" }
+  ]},
+  { t: "Machine identities", items: [
+    { t: "No long-lived cloud keys", s: "Use workload identity or OIDC so servers and CI get short-lived credentials.", g: "access leak" },
+    { t: "One identity per service", s: "Each service, job and integration has its own narrowly scoped credential.", g: "access" },
+    { t: "Review connected OAuth apps", s: "Check which third-party apps can read your GitHub, Google Workspace or Slack.",
+      l: [["GitHub OAuth app restrictions", "https://docs.github.com/en/organizations/managing-oauth-access-to-your-organizations-data/about-oauth-app-access-restrictions"]], g: "access leak" }
+  ]}
+]});
+
+/* ---------- 07 ---------- */
+BP.phases.push({ k: "build", h: 188, t: "Build securely",
+  b: "Write code that resists the common attacks, and keep secrets and dependencies under control.",
+  topics: [
+  { t: "Secure coding", items: [
+    { t: "Learn the OWASP Top 10", s: "The most common web risks, from broken access control to injection and misconfiguration.",
+      l: [["OWASP Top 10", "https://owasp.org/projects/top-ten"], ["OWASP Cheat Sheet Series", "https://cheatsheetseries.owasp.org/"]], g: "sec" },
+    { t: "Validate every input on the server", s: "Check the shape of every request body, parameter and header. Reject the unexpected.",
+      l: [["Zod", "https://zod.dev/"], ["OWASP Input Validation", "https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html"]], g: "sec must" },
+    { t: "Use parameterised queries", s: "Use an ORM or prepared statements. Never build SQL by gluing strings together.",
+      l: [["OWASP SQL Injection Prevention", "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html"]], g: "sec must" },
+    { t: "Escape output; avoid raw HTML", s: "Let the framework escape. Clean any user-supplied HTML with DOMPurify.",
+      l: [["DOMPurify", "https://github.com/cure53/DOMPurify"]], g: "sec" },
+    { t: "Handle file uploads safely", s: "Check type and size, rename files, store outside the web root, scan for malware.",
+      l: [["OWASP File Upload", "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html"]], g: "sec" },
+    { t: "Block server-side request forgery", s: "When the server fetches a URL, allow only known destinations and block internal IPs.",
+      l: [["OWASP SSRF Prevention", "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html"]], g: "sec leak" },
+    { t: "Fail safely", s: "Plain error messages for users, details only in logs. No stack traces in production.", g: "leak sec" }
+  ]},
+  { t: "Secrets", items: [
+    { id: "secrets", t: "Keep secrets out of code", s: "No keys in git, the frontend bundle or container images. Load them at runtime.",
+      l: [["Doppler", "https://www.doppler.com/"], ["Infisical", "https://infisical.com/"], ["AWS Secrets Manager", "https://aws.amazon.com/secrets-manager/"]], g: "leak must" },
+    { t: "Turn on secret scanning", s: "Push protection blocks commits containing keys before they reach the repository.",
+      l: [["GitHub secret scanning", "https://docs.github.com/en/code-security/concepts/secret-security/secret-scanning"], ["Gitleaks", "https://github.com/gitleaks/gitleaks"], ["TruffleHog", "https://github.com/trufflesecurity/trufflehog"]], g: "leak must" },
+    { t: "Know which keys may be public", s: "Publishable keys can ship to the browser. Secret and service-role keys never can.",
+      d: "Classic leak: a Supabase service_role key, a Stripe secret key or a cloud key placed in a NEXT_PUBLIC_ or VITE_ variable, which bundles it into the website for anyone to read.", g: "leak must" },
+    { t: "Rotate leaked secrets at once", s: "Deleting the commit isn't enough; history and forks keep it. Revoke, then replace.", g: "leak" },
+    { t: "Ignore .env files from day one", s: "Add .env to .gitignore and run a secret scanner before every commit.",
+      l: [["pre-commit", "https://pre-commit.com/"]], g: "leak" }
+  ]},
+  { t: "Dependencies & supply chain", items: [
+    { id: "deps", t: "Automate dependency updates", s: "Dependabot or Renovate opens update PRs; merge them every week.",
+      l: [["Dependabot", "https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-version-updates"], ["Renovate", "https://docs.renovatebot.com/"]], g: "sec must" },
+    { t: "Scan for known vulnerabilities", s: "Fail the build on critical issues in packages and container images.",
+      l: [["OSV-Scanner", "https://google.github.io/osv-scanner/"], ["Snyk", "https://snyk.io/"], ["Trivy", "https://trivy.dev/"]], g: "sec" },
+    { t: "Vet new packages before adding", s: "Check popularity, maintainers, install scripts and look-alike names.",
+      l: [["Socket", "https://socket.dev/"], ["OpenSSF Scorecard", "https://scorecard.dev/"]], g: "sec" },
+    { t: "Commit lockfiles, pin versions", s: "Reproducible installs (npm ci or equivalent) so builds can't change silently.", g: "sec" },
+    { t: "Generate a software bill of materials", s: "An SBOM answers “are we affected?” in minutes when a new flaw is announced.",
+      l: [["CycloneDX", "https://cyclonedx.org/"], ["Syft", "https://github.com/anchore/syft"]], g: "sec" }
+  ]},
+  { t: "Code review & repo", items: [
+    { t: "Protect the main branch", s: "Require pull requests, reviews and passing checks. No force-pushes.",
+      l: [["GitHub protected branches", "https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches"]], g: "access must" },
+    { t: "Run static analysis on every PR", s: "Semgrep or CodeQL flags injection, unsafe APIs and hard-coded secrets.",
+      l: [["Semgrep", "https://semgrep.dev/"], ["CodeQL", "https://codeql.github.com/"]], g: "sec" },
+    { t: "Double-review sensitive changes", s: "Changes to login, payments, permissions or crypto get a second reviewer.", g: "sec access" },
+    { t: "Sign commits and releases", s: "Proves who wrote the code and that builds weren't tampered with.",
+      l: [["Sigstore", "https://www.sigstore.dev/"], ["SLSA", "https://slsa.dev/"]], g: "sec" }
+  ]},
+  { t: "AI features & AI-written code", items: [
+    { t: "Review AI-generated code", s: "Treat it like a new hire's PR: check permissions, validation and every new package.",
+      d: "Assistants sometimes invent package names, and attackers register those names (‘slopsquatting’). Confirm each dependency is real and the one you meant.", g: "sec must" },
+    { t: "Defend against prompt injection", s: "Treat model output as untrusted. Never let it run tools or queries unchecked.",
+      l: [["OWASP Top 10 for LLM Apps", "https://genai.owasp.org/llm-top-10/"]], g: "sec" },
+    { t: "Limit data sent to AI providers", s: "Send the minimum, strip personal data, choose no-training and zero-retention options.", g: "data leak" },
+    { t: "Set rules for staff AI use", s: "Approved tools only, on business terms that exclude training on your data.", g: "leak data" }
+  ]}
+]});
+
+/* ---------- 08 ---------- */
+BP.phases.push({ k: "test", h: 212, t: "Test & attack it",
+  b: "Try to break your own app before someone else does.",
+  topics: [
+  { t: "Automated tests", items: [
+    { t: "Unit and integration tests", s: "Cover the business rules, and above all the permission checks.", g: "sec" },
+    { t: "Write ‘user A vs user B’ tests", s: "For each endpoint: user A must not read, change or delete user B's data.", g: "access must leak" },
+    { t: "End-to-end tests for key flows", s: "Sign up, log in, reset password, pay, delete account.",
+      l: [["Playwright", "https://playwright.dev/"]] },
+    { t: "Load and flood testing", s: "See how the app behaves under traffic spikes and floods of requests.",
+      l: [["Grafana k6", "https://k6.io/"]], g: "sec" }
+  ]},
+  { t: "Security scanning", items: [
+    { t: "Scan the running app (DAST)", s: "ZAP crawls staging and probes for common flaws automatically.",
+      l: [["ZAP", "https://www.zaproxy.org/"], ["Nuclei", "https://github.com/projectdiscovery/nuclei"]], g: "sec" },
+    { t: "Scan infrastructure code", s: "Catch public buckets and open databases before they are deployed.",
+      l: [["Checkov", "https://www.checkov.io/"], ["Trivy", "https://trivy.dev/"]], g: "sec leak" },
+    { t: "Scan container images", s: "Use minimal base images and scan them on every build.",
+      l: [["Distroless images", "https://github.com/GoogleContainerTools/distroless"]], g: "sec" },
+    { t: "Fuzz your parsers and inputs", s: "Throw random and malformed input at file parsers, APIs and forms.", g: "sec" }
+  ]},
+  { t: "Manual testing", items: [
+    { t: "Follow the OWASP testing guide", s: "A structured list of what to try: login, sessions, input, business logic.",
+      l: [["OWASP Web Security Testing Guide", "https://owasp.org/projects/web-security-testing-guide"]], g: "sec" },
+    { t: "Learn to attack your own app", s: "Free hands-on labs teach the techniques real attackers use.",
+      l: [["PortSwigger Web Security Academy", "https://portswigger.net/web-security"], ["Burp Suite", "https://portswigger.net/burp"]], g: "sec" },
+    { t: "Test business-logic abuse", s: "Negative quantities, skipped steps, reused coupons, double-clicks and race conditions.", g: "sec" },
+    { t: "Test mobile builds", s: "Check on-device storage, logs, certificate handling and how easy the app is to unpack.",
+      l: [["OWASP MASTG", "https://mas.owasp.org/MASTG/"], ["MobSF", "https://github.com/MobSF/Mobile-Security-Framework-MobSF"]], g: "sec leak" }
+  ]},
+  { t: "Outside eyes", items: [
+    { t: "Get a penetration test before launch", s: "An independent tester finds what your team can't see.",
+      d: "Scope it to your riskiest flows: login, payments, permissions, file uploads. Fix the critical findings before launch and ask for a retest.", g: "sec must" },
+    { t: "Publish a security.txt", s: "Tells researchers how to report vulnerabilities to you.",
+      l: [["securitytxt.org", "https://securitytxt.org/"]], g: "sec" },
+    { t: "Consider a bug bounty later", s: "Once the basics are solid, pay researchers for what they find.",
+      l: [["HackerOne", "https://www.hackerone.com/"], ["Intigriti", "https://www.intigriti.com/"], ["Bugcrowd", "https://www.bugcrowd.com/"]], g: "sec" }
+  ]}
+]});
+
+/* ---------- 09 ---------- */
+BP.phases.push({ k: "hosting", h: 236, t: "Where to host",
+  b: "Pick hosting that fits your skills, budget, data-region needs and compliance. Simple beats clever.",
+  topics: [
+  { t: "Before you choose", items: [
+    { t: "Know the shared responsibility model", s: "The host secures the hardware. You secure the configuration, code, data and access.",
+      l: [["AWS shared responsibility model", "https://aws.amazon.com/compliance/shared-responsibility-model/"]], g: "sec must" },
+    { t: "Check certifications and a DPA", s: "SOC 2 or ISO 27001 reports and a signed data processing agreement from every host.", g: "data" },
+    { t: "Pin every data region", s: "Choose the region for compute, database, backups and logs explicitly.", g: "data" },
+    { t: "Match the host to your team", s: "No ops team? Use a platform that patches servers for you. Fewer moving parts, fewer mistakes.", g: "sec" }
+  ]},
+  { t: "Websites & frontends", items: [
+    { t: "Vercel", s: "Next.js-first hosting with preview deploys, a global edge and serverless functions.",
+      l: [["vercel.com", "https://vercel.com/"]] },
+    { t: "Netlify", s: "Static sites and frontend apps with functions, forms and previews.",
+      l: [["netlify.com", "https://www.netlify.com/"]] },
+    { t: "Cloudflare Workers & Pages", s: "Edge hosting with built-in DDoS protection and a generous free tier.",
+      l: [["Cloudflare Workers", "https://workers.cloudflare.com/"], ["Cloudflare Pages", "https://pages.cloudflare.com/"]] },
+    { t: "Protect preview links", s: "Preview URLs are often public and talk to real APIs. Put them behind a password or SSO.", g: "leak access" }
+  ]},
+  { t: "App platforms (easiest)", items: [
+    { t: "Render", s: "Web services, workers, cron jobs and managed Postgres with private networking.",
+      l: [["render.com", "https://render.com/"]] },
+    { t: "Railway", s: "Fast deploys from Git, with databases one click away.",
+      l: [["railway.com", "https://railway.com/"]] },
+    { t: "Fly.io", s: "Run containers close to your users, in regions you pick.",
+      l: [["fly.io", "https://fly.io/"]] },
+    { t: "Google Cloud Run", s: "Serverless containers that scale to zero, with Google's IAM built in.",
+      l: [["Cloud Run", "https://cloud.google.com/run"]] },
+    { t: "DigitalOcean App Platform", s: "A simple platform with managed databases and predictable pricing.",
+      l: [["App Platform", "https://www.digitalocean.com/products/app-platform"]] }
+  ]},
+  { t: "Full cloud (most control)", items: [
+    { t: "AWS", s: "The widest range of services; strongest option for compliance-heavy apps.",
+      l: [["aws.amazon.com", "https://aws.amazon.com/"]] },
+    { t: "Google Cloud", s: "Strong data and AI services, Cloud Run and Kubernetes (GKE).",
+      l: [["cloud.google.com", "https://cloud.google.com/"]] },
+    { t: "Microsoft Azure", s: "The natural fit if you already live in Microsoft 365 and Entra ID.",
+      l: [["azure.microsoft.com", "https://azure.microsoft.com/"]] },
+    { t: "Use one account per environment", s: "An AWS Organization or GCP folders, with production isolated from everything else.", g: "access must" }
+  ]},
+  { t: "EU, VPS & self-hosting", items: [
+    { t: "Hetzner", s: "Low-cost servers in Germany and Finland for EU data residency.",
+      l: [["Hetzner Cloud", "https://www.hetzner.com/cloud"]], g: "data" },
+    { t: "Scaleway and OVHcloud", s: "European clouds with managed databases and EU-only regions.",
+      l: [["Scaleway", "https://www.scaleway.com/"], ["OVHcloud", "https://www.ovhcloud.com/"]], g: "data" },
+    { t: "Self-host a deploy platform", s: "Coolify, Dokku or Kamal give push-to-deploy on your own server.",
+      l: [["Coolify", "https://coolify.io/"], ["Dokku", "https://dokku.com/"], ["Kamal", "https://kamal-deploy.org/"]] },
+    { t: "Harden any server you run", s: "SSH keys only, firewall on, automatic security updates, no root login.",
+      l: [["CIS Benchmarks", "https://www.cisecurity.org/cis-benchmarks"]], g: "sec must" }
+  ]},
+  { t: "Mobile, services & edge", items: [
+    { t: "App store accounts", s: "Apple Developer and Google Play Console, registered to the company.",
+      l: [["Apple Developer Program", "https://developer.apple.com/programs/"], ["Google Play Console", "https://play.google.com/console/"]], g: "access" },
+    { t: "Backend-as-a-service", s: "Supabase, Firebase, Convex or PocketBase for login, data and files in one place.",
+      l: [["Convex", "https://www.convex.dev/"], ["PocketBase", "https://pocketbase.io/"]] },
+    { t: "Put a CDN and firewall in front", s: "DDoS protection, caching, TLS and a web application firewall at the edge.",
+      l: [["Cloudflare", "https://www.cloudflare.com/"], ["Amazon CloudFront", "https://aws.amazon.com/cloudfront/"]], g: "sec" },
+    { t: "Transactional email service", s: "Password resets and receipts need good delivery and DKIM signing.",
+      l: [["Postmark", "https://postmarkapp.com/"], ["Resend", "https://resend.com/"], ["Amazon SES", "https://aws.amazon.com/ses/"]] }
+  ]}
+]});
+
+/* ---------- 10 ---------- */
+BP.phases.push({ k: "deploy", h: 260, t: "Deploy pipeline",
+  b: "Every change reaches production the same way: reviewed, automated, tested and reversible.",
+  topics: [
+  { t: "CI/CD", items: [
+    { t: "Automate build, test and deploy", s: "Every merge runs the same pipeline. Nobody deploys from a laptop.",
+      l: [["GitHub Actions", "https://github.com/features/actions"], ["GitLab CI/CD", "https://docs.gitlab.com/ci/"]], g: "sec access" },
+    { t: "Harden the pipeline itself", s: "Pin third-party actions to commit SHAs, use least-privilege tokens, no secrets for fork PRs.",
+      l: [["GitHub Actions: secure use", "https://docs.github.com/en/actions/reference/security/secure-use"]], g: "sec leak" },
+    { t: "Deploy with OIDC, not stored keys", s: "CI swaps a short-lived token for a deploy role. No cloud keys saved in CI.",
+      l: [["GitHub OIDC", "https://docs.github.com/en/actions/concepts/security/openid-connect"]], g: "access leak" },
+    { t: "Add security gates", s: "Tests, static analysis, dependency and secret scans must pass before deploy.", g: "sec must" },
+    { t: "Require approval for production", s: "Protected environments with named approvers.", g: "access" }
+  ]},
+  { t: "Infrastructure as code", items: [
+    { t: "Define infrastructure in code", s: "Terraform, OpenTofu or Pulumi: reviewed, versioned and repeatable.",
+      l: [["OpenTofu", "https://opentofu.org/"], ["Terraform", "https://www.terraform.io/"], ["Pulumi", "https://www.pulumi.com/"]], g: "sec" },
+    { t: "Protect the state file", s: "Infrastructure state often contains secrets. Store it encrypted, with locked-down access.", g: "leak access" },
+    { t: "Detect drift", s: "Get alerted when someone changes production by hand.", g: "sec" }
+  ]},
+  { t: "Release safely", items: [
+    { t: "Use feature flags", s: "Ship code switched off, turn it on for a few users, switch it off instantly.",
+      l: [["OpenFeature", "https://openfeature.dev/"], ["Unleash", "https://www.getunleash.io/"], ["PostHog feature flags", "https://posthog.com/feature-flags"]] },
+    { t: "Canary or blue-green deploys", s: "Send a small share of traffic to the new version first, then the rest." },
+    { t: "Keep one-click rollback", s: "Any release can be reverted in minutes.", g: "sec" },
+    { t: "Migrate databases safely", s: "Expand, migrate, then contract. Back up first; never destroy data in one step.",
+      l: [["Parallel change (Martin Fowler)", "https://martinfowler.com/bliki/ParallelChange.html"]], g: "data" }
+  ]},
+  { t: "Containers", items: [
+    { t: "Minimal, non-root images", s: "Small base images, run as a normal user, read-only file system.",
+      l: [["Docker build best practices", "https://docs.docker.com/build/building/best-practices/"]], g: "sec" },
+    { t: "Never bake secrets into images", s: "Image layers keep everything forever. Inject secrets at runtime.", g: "leak" },
+    { t: "Sign and verify images", s: "Only run images your own pipeline built and signed.",
+      l: [["Sigstore cosign", "https://docs.sigstore.dev/"]], g: "sec" }
+  ]}
+]});
+
+/* ---------- 11 ---------- */
+BP.phases.push({ k: "legal", h: 284, t: "Legal & compliance",
+  b: "Write down what you do with data, sign the right contracts and meet the rules for your market.",
+  topics: [
+  { t: "What users see", items: [
+    { t: "Privacy policy", s: "What you collect, why, who you share it with, how long you keep it, and users' rights.",
+      l: [["ICO guidance (UK)", "https://ico.org.uk/for-organisations/"], ["Termly", "https://termly.io/"], ["iubenda", "https://www.iubenda.com/"]], g: "data must" },
+    { t: "Terms of service", s: "Acceptable use, limits of liability, how accounts can be closed.", g: "must" },
+    { t: "Cookie consent where required", s: "Non-essential cookies and trackers need opt-in consent in the EU and UK.",
+      l: [["Cookiebot", "https://www.cookiebot.com/"]], g: "data" },
+    { t: "App store privacy labels", s: "Apple's privacy details and Google Play's Data safety form must match reality.",
+      l: [["Apple app privacy details", "https://developer.apple.com/app-store/app-privacy-details/"], ["Google Play Data safety", "https://support.google.com/googleplay/android-developer/answer/10787469"]], g: "data" }
+  ]},
+  { t: "Privacy law", items: [
+    { t: "GDPR and UK GDPR basics", s: "Lawful basis, minimisation, user rights, and 72 hours to report a breach.",
+      l: [["GDPR full text", "https://gdpr-info.eu/"]], g: "data" },
+    { t: "US state privacy laws", s: "CCPA/CPRA and similar laws give rights to know, delete and opt out of sale.",
+      l: [["CCPA (California AG)", "https://oag.ca.gov/privacy/ccpa"]], g: "data" },
+    { t: "Assess high-risk processing", s: "A data protection impact assessment (DPIA) for sensitive data or large-scale tracking.",
+      l: [["ICO: DPIAs", "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/accountability-and-governance/data-protection-impact-assessments-dpias/"]], g: "data" },
+    { t: "Answer data requests on time", s: "A simple process to handle access and deletion requests within one month.", g: "data" }
+  ]},
+  { t: "Vendors & contracts", items: [
+    { t: "Sign a DPA with every processor", s: "Hosting, email, analytics, support and AI vendors all need one.", g: "data must" },
+    { t: "Publish a sub-processor list", s: "Who processes data on your behalf, and where. Business customers will ask.", g: "data" },
+    { t: "Check vendor security", s: "Ask for SOC 2 or ISO reports; prefer vendors with SSO and audit logs.", g: "data access" }
+  ]},
+  { t: "Standards & industry rules", items: [
+    { t: "SOC 2 or ISO 27001 for B2B", s: "Business buyers often require one. Compliance tools make it manageable.",
+      l: [["ISO/IEC 27001", "https://www.iso.org/standard/27001"], ["Vanta", "https://www.vanta.com/"], ["Drata", "https://drata.com/"]], g: "sec" },
+    { t: "Industry-specific rules", s: "PCI DSS for cards, HIPAA for US health, DORA for EU finance, COPPA for children.",
+      l: [["HIPAA (HHS)", "https://www.hhs.gov/hipaa/index.html"], ["PCI Security Standards", "https://www.pcisecuritystandards.org/"]], g: "data" },
+    { t: "EU Cyber Resilience Act", s: "Security and vulnerability-reporting duties for software sold in the EU, phasing in 2026–2027.",
+      l: [["Cyber Resilience Act", "https://digital-strategy.ec.europa.eu/en/policies/cyber-resilience-act"]], g: "sec" },
+    { t: "EU AI Act for AI features", s: "Transparency duties for chatbots and generated content; stricter rules for high-risk uses.",
+      l: [["EU AI Act explorer", "https://artificialintelligenceact.eu/"]] },
+    { t: "Accessibility law", s: "The European Accessibility Act has covered many consumer apps since June 2025.",
+      l: [["WCAG overview (W3C)", "https://www.w3.org/WAI/standards-guidelines/wcag/"]] }
+  ]}
+]});
+
+/* ---------- 12 ---------- */
+BP.phases.push({ k: "launch", h: 308, t: "Launch hardening",
+  b: "The final pre-flight checklist. Finish it before real users and real data arrive.",
+  topics: [
+  { t: "Web protections", items: [
+    { t: "Set security headers", s: "CSP, HSTS, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, frame-ancestors.",
+      l: [["securityheaders.com", "https://securityheaders.com/"], ["MDN HTTP Observatory", "https://developer.mozilla.org/en-US/observatory"], ["OWASP Secure Headers", "https://owasp.org/projects/secure-headers-project"]], g: "sec must" },
+    { t: "Score an A on TLS", s: "Test your TLS setup and certificate chain, then consider HSTS preload.",
+      l: [["SSL Labs server test", "https://www.ssllabs.com/ssltest/"], ["HSTS preload", "https://hstspreload.org/"]], g: "sec" },
+    { t: "Configure CORS tightly", s: "Allow only your own origins. Never echo back any origin when credentials are allowed.", g: "sec leak" },
+    { t: "Defend against CSRF", s: "SameSite cookies plus CSRF tokens on every request that changes something.",
+      l: [["OWASP CSRF Prevention", "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html"]], g: "sec" }
+  ]},
+  { t: "Abuse protection", items: [
+    { id: "ratelimit", t: "Rate-limit everything public", s: "Login, sign-up, reset, search, API and AI endpoints, per IP and per account.",
+      l: [["Cloudflare WAF & rate limiting", "https://www.cloudflare.com/products/waf/"], ["Upstash Ratelimit", "https://upstash.com/docs/redis/sdks/ratelimit-ts/overview"]], g: "sec must" },
+    { t: "Turn on a WAF and DDoS protection", s: "Managed firewall rules block common attacks before they reach you.", g: "sec" },
+    { t: "Stop bots at sign-up", s: "Invisible challenges block fake accounts and password-stuffing.",
+      l: [["Cloudflare Turnstile", "https://www.cloudflare.com/products/turnstile/"], ["hCaptcha", "https://www.hcaptcha.com/"]], g: "sec" },
+    { t: "Cap spend on paid APIs", s: "Quotas on SMS, email and AI calls stop ‘denial of wallet’ attacks.", g: "sec" }
+  ]},
+  { t: "Remove what leaks", items: [
+    { t: "Turn off debug mode", s: "No verbose errors, debug toolbars or public source maps in production.", g: "leak must" },
+    { t: "Close dev paths and endpoints", s: "Block /.git, /.env, test routes, open API docs and default admin pages.", g: "leak must" },
+    { t: "Check search engine indexing", s: "Private pages stay behind login and marked noindex. Nothing sensitive in sitemaps.", g: "leak" },
+    { t: "Delete test accounts and defaults", s: "Remove seed users and change every password that was ever shared.", g: "access leak must" },
+    { t: "Check for subdomain takeover", s: "Delete DNS records that point at services you no longer use.",
+      l: [["can-i-take-over-xyz", "https://github.com/EdOverflow/can-i-take-over-xyz"]], g: "sec" }
+  ]},
+  { t: "Go / no-go", items: [
+    { t: "Run the launch checklist", s: "Pentest criticals fixed, a backup restored, alerts tested, someone on call.", g: "must" },
+    { t: "Have the incident plan ready", s: "Who to call, how to switch things off, how to tell users. See step 14.", g: "must" },
+    { t: "Set up a status page", s: "Tell users about problems before they have to tell you.",
+      l: [["Instatus", "https://instatus.com/"], ["Better Stack", "https://betterstack.com/"]] },
+    { t: "Launch in stages", s: "Invite-only or a waitlist first. Watch the numbers, then open up." }
+  ]}
+]});
+
+/* ---------- 13 ---------- */
+BP.phases.push({ k: "monitor", h: 332, t: "Monitor & detect",
+  b: "You can't respond to what you can't see. Log the right things, and never log secrets.",
+  topics: [
+  { t: "Logging", items: [
+    { t: "Log security events", s: "Logins, failures, permission denials, admin actions, exports and key changes.",
+      l: [["OWASP Logging Cheat Sheet", "https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html"]], g: "sec must" },
+    { t: "Never log secrets or personal data", s: "Redact tokens, passwords, card numbers and personal fields before they're written.", g: "leak must data" },
+    { t: "Centralise and protect logs", s: "Ship logs off the server; append-only, access-controlled, kept 90 days or more.", g: "data access" },
+    { t: "Turn on cloud audit trails", s: "Record every console and API action in your cloud accounts.",
+      l: [["AWS CloudTrail", "https://aws.amazon.com/cloudtrail/"], ["Google Cloud Audit Logs", "https://cloud.google.com/logging/docs/audit"]], g: "access" }
+  ]},
+  { t: "Monitoring", items: [
+    { t: "Track errors, with scrubbing on", s: "Catch crashes with stack traces, with personal-data scrubbing enabled.",
+      l: [["Sentry", "https://sentry.io/"]], g: "leak" },
+    { t: "Uptime checks from outside", s: "External checks every minute from several regions.",
+      l: [["UptimeRobot", "https://uptimerobot.com/"], ["Better Stack", "https://betterstack.com/"]] },
+    { t: "Metrics and tracing", s: "Know what normal looks like so you can spot abnormal.",
+      l: [["OpenTelemetry", "https://opentelemetry.io/"], ["Grafana Cloud", "https://grafana.com/"]] },
+    { t: "Use privacy-friendly analytics", s: "Cookieless or EU-hosted analytics. Mask form inputs in session replay.",
+      l: [["Plausible", "https://plausible.io/"], ["PostHog", "https://posthog.com/"], ["Umami", "https://umami.is/"]], g: "data leak" }
+  ]},
+  { t: "Detection & alerts", items: [
+    { id: "alerts", t: "Alert on suspicious activity", s: "Login spikes, mass exports, new admin users, sign-ins from new countries.", g: "sec must" },
+    { t: "Use cloud threat detection", s: "Managed detectors flag leaked keys, crypto-mining and odd API use.",
+      l: [["Amazon GuardDuty", "https://aws.amazon.com/guardduty/"], ["Wazuh (open source)", "https://wazuh.com/"]], g: "sec" },
+    { t: "Plant canary tokens", s: "Fake keys and records that alert you the moment someone uses them.",
+      l: [["Canarytokens", "https://canarytokens.org/"]], g: "leak sec" },
+    { t: "Watch for breached accounts", s: "Get told when accounts on your domain appear in breach dumps.",
+      l: [["Have I Been Pwned: domain search (sign-in)", "https://haveibeenpwned.com/DomainSearch"]], g: "leak" },
+    { t: "Make sure a human sees alerts", s: "An on-call rota, paging, and alerts someone actually reads.",
+      l: [["PagerDuty", "https://www.pagerduty.com/"], ["incident.io", "https://incident.io/"]] }
+  ]}
+]});
+
+/* ---------- 14 ---------- */
+BP.phases.push({ k: "incident", h: 356, t: "Incidents & recovery",
+  b: "Assume something will go wrong. Decide now how you'll contain it, recover and tell people.",
+  topics: [
+  { t: "Prepare", items: [
+    { id: "irplan", t: "Write an incident response plan", s: "Roles, severity levels, contacts, first steps and message templates.",
+      h: ["Define severities, e.g. SEV1 = customer data exposed or app down", "Name an incident lead and a deputy for each severity", "Write the first 30 minutes: contain, preserve evidence, start a timeline", "Prepare user, regulator and status-page message templates"],
+      l: [["NIST SP 800-61 Rev. 3", "https://csrc.nist.gov/pubs/sp/800/61/r3/final"], ["PagerDuty incident response guide", "https://response.pagerduty.com/"]], g: "sec must" },
+    { t: "Keep an offline contact sheet", s: "Phone numbers for the team, host, lawyer and insurer, usable even if email is down." },
+    { t: "Build kill switches", s: "One step to disable sign-ups, a feature, an API key or every session.", g: "sec" },
+    { t: "Rehearse once a year", s: "Walk through “our database leaked” as a tabletop exercise.", g: "sec" },
+    { t: "Consider cyber insurance", s: "Can cover forensics, notification costs and legal advice." }
+  ]},
+  { t: "Respond", items: [
+    { t: "Contain first", s: "Revoke keys, block access, isolate systems. Preserve evidence before wiping anything.", g: "sec" },
+    { t: "Rotate everything that may be exposed", s: "Assume anything the attacker could reach is compromised.", g: "leak access" },
+    { t: "Notify within the legal deadline", s: "GDPR: the regulator within 72 hours; affected users without undue delay if risk is high.",
+      l: [["GDPR Article 33", "https://gdpr-info.eu/art-33-gdpr/"], ["ICO: report a breach", "https://ico.org.uk/for-organisations/report-a-breach/"]], g: "data must" },
+    { t: "Communicate honestly", s: "What happened, which data, what you're doing, and what users should do now." }
+  ]},
+  { t: "Recover & learn", items: [
+    { t: "Restore from clean backups", s: "Know which backup predates the compromise; restore onto fresh infrastructure.", g: "data" },
+    { t: "Test your recovery targets", s: "Prove you can meet your RTO and RPO with a real restore drill.",
+      l: [["AWS disaster recovery whitepaper", "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-workloads-on-aws.html"]], g: "data" },
+    { t: "Run blameless postmortems", s: "Find causes in systems, not people, and track every fix to done.",
+      l: [["Google SRE: postmortem culture", "https://sre.google/sre-book/postmortem-culture/"]] },
+    { t: "Feed lessons back in", s: "Each incident updates the threat model, tests and runbooks.", g: "sec" }
+  ]}
+]});
+
+/* ---------- 15 ---------- */
+BP.phases.push({ k: "maintain", h: 116, t: "Update & maintain",
+  b: "Shipping is the start. Keep dependencies, platforms, access and data healthy for the app's whole life.",
+  topics: [
+  { t: "Routine updates", items: [
+    { t: "Patch on a schedule", s: "Merge dependency updates weekly; fix actively exploited flaws within 48 hours.",
+      l: [["CISA Known Exploited Vulnerabilities", "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"], ["GitHub Advisory Database", "https://github.com/advisories"]], g: "sec must" },
+    { t: "Track end-of-life dates", s: "Upgrade Node, Python, databases and operating systems before support ends.",
+      l: [["endoflife.date", "https://endoflife.date/"]], g: "sec" },
+    { t: "Version releases clearly", s: "Semantic version numbers and a changelog people can read.",
+      l: [["Semantic Versioning", "https://semver.org/"], ["Keep a Changelog", "https://keepachangelog.com/"]] },
+    { t: "Automate release notes", s: "Conventional commit messages let tools write changelogs and bump versions.",
+      l: [["Conventional Commits", "https://www.conventionalcommits.org/"], ["release-please", "https://github.com/googleapis/release-please"]] }
+  ]},
+  { t: "Every release", items: [
+    { t: "Loop back through steps 07–10", s: "Each release gets review, scans, tests and a staged rollout again.", g: "sec" },
+    { t: "Revisit the threat model", s: "New data, new roles or a new integration? Go back to step 02 for that feature.", g: "sec" },
+    { t: "Mobile: staged rollouts", s: "Release to a share of users first; force an update for versions with security bugs.",
+      l: [["Google Play staged rollouts", "https://support.google.com/googleplay/android-developer/answer/6346149"], ["Apple phased release", "https://developer.apple.com/help/app-store-connect/update-your-app/release-a-version-update-in-phases"]] },
+    { t: "Over-the-air fixes for mobile", s: "Ship JavaScript and asset fixes without a store review, within store rules.",
+      l: [["Expo EAS Update", "https://docs.expo.dev/eas-update/introduction/"]] }
+  ]},
+  { t: "Ongoing hygiene", items: [
+    { t: "Review access every quarter", s: "Remove people, keys and integrations that no longer need access.", g: "access must" },
+    { t: "Rotate keys and secrets", s: "On a schedule, and whenever someone with access leaves.", g: "access leak" },
+    { t: "Confirm deletion jobs run", s: "Check old data is actually being deleted, including from backups.", g: "data leak" },
+    { t: "Yearly pentest and restore drill", s: "Retest after big changes; restore a full backup into a clean account.", g: "sec data" },
+    { t: "Prune vendors and services", s: "Every unused service is attack surface and another copy of your data.", g: "leak data" }
+  ]},
+  { t: "Scale & retire", items: [
+    { t: "Scale without weakening security", s: "New regions, replicas and caches get the same encryption, access rules and logging.", g: "data sec" },
+    { t: "Retire features cleanly", s: "Delete their data, endpoints, flags, keys and DNS records.", g: "leak data" },
+    { t: "Shut down responsibly", s: "Warn users, offer export, delete data and backups, and keep the domain registered.", g: "data leak" }
+  ]}
+]});
+
+/* ---------- Security HQ ---------- */
+BP.hq = {
+  lede: "No app is bulletproof. A well-built one is expensive to attack, leaks little when it's hit, notices fast and recovers fast. Every card on this board pulls one of these four levers.",
+  levers: [
+    ["Prevent", "Make attacks hard: strong sign-in, checked input, patched software.", 262],
+    ["Limit", "Shrink the blast radius: least privilege, encryption, isolation, collecting less.", 160],
+    ["Detect", "Notice quickly: security logs, alerts, canary tokens, monitoring.", 70],
+    ["Recover", "Bounce back: tested backups, an incident plan, honest communication.", 25]
+  ],
+  mvs: [
+    ["Strong MFA on every company account", "mfa"],
+    ["A team password manager; no shared or reused passwords", "pwm"],
+    ["Secrets out of code, with secret scanning switched on", "secrets"],
+    ["A proven login provider; never home-made login or crypto", "authprov"],
+    ["A server-side permission check on every request", "authz"],
+    ["HTTPS everywhere, plus encryption at rest", "tls"],
+    ["Database on a private network, least-privilege roles", "dbpriv"],
+    ["Automated dependency updates, merged weekly", "deps"],
+    ["Encrypted backups in a separate account, restores tested", "backups"],
+    ["Security logs with alerts on unusual activity", "alerts"],
+    ["Rate limits and bot protection on login and sign-up", "ratelimit"],
+    ["A written incident plan before launch", "irplan"]
+  ],
+  rules: [
+    ["Least privilege", "Every person, service and key gets only the access it needs, only for as long as it needs it."],
+    ["Defence in depth", "Assume any single layer will fail. The next one must still hold."],
+    ["Secure by default", "New users, buckets and endpoints start closed. Opening anything is a deliberate act."],
+    ["Collect less", "Data you never store can't leak, can't be subpoenaed and costs nothing to protect."],
+    ["Trust nothing implicitly", "Authenticate and authorise every request, including ‘internal’ ones."],
+    ["Assume breach", "Plan detection, blast-radius limits and recovery before you need them."],
+    ["Automate the checks", "Scanners and tests in the pipeline beat good intentions every time."],
+    ["Keep it simple", "Each extra service, package and admin account is more attack surface."]
+  ],
+  rings: [
+    ["People & accounts", "MFA, password manager, training, same-day offboarding"],
+    ["Edge", "DNS, CDN, WAF, DDoS protection, rate limits, TLS"],
+    ["Network", "Private subnets, firewalls, no public database, zero-trust admin access"],
+    ["Application", "Sign-in, permission checks, input validation, safe defaults"],
+    ["Data", "Encryption, row-level security, least-privilege roles, minimisation"]
+  ],
+  core: ["Your users' data", "Logs, alerts and backups wrap every layer"],
+  dataMap: [
+    ["User's device", "Injected scripts read browser storage; phones get lost", "Sessions in HttpOnly cookies; Keychain or Keystore on mobile; no secrets in the app bundle"],
+    ["In transit", "Interception on public Wi-Fi or a hostile network", "TLS everywhere, HSTS, TLS from the app to the database too"],
+    ["CDN / edge cache", "Private pages cached and served to the wrong person", "Cache-Control: private, no-store on anything personal"],
+    ["App servers", "Memory dumps, temp files, a compromised box", "Stateless servers, no personal data on disk, patched images"],
+    ["Primary database", "Public exposure, stolen credentials, SQL injection", "Private network, encryption at rest, row-level security, least-privilege roles"],
+    ["File storage", "Public buckets and guessable file links", "Block public access; short-lived signed URLs"],
+    ["Backups & snapshots", "Forgotten copies nobody watches", "Encrypted, separate account, access-logged, retention limits, tested"],
+    ["Logs & error reports", "Tokens and personal data captured in plain text", "Redact at source, restrict access, short retention"],
+    ["Analytics & session replay", "Form inputs and emails recorded by trackers", "Mask inputs, pseudonymous IDs, consent, EU or self-hosted options"],
+    ["Vendors (email, payments, support, AI)", "Their breach becomes yours; training on your data", "DPAs, minimum fields, zero-retention options, review yearly"],
+    ["Developer laptops", "Database dumps, .env files, stolen devices", "Disk encryption, no production data locally, fake seed data"],
+    ["Chat, email & tickets", "Customer data pasted around and kept forever", "Clear rules, redaction, retention limits"]
+  ],
+  tiers: [
+    ["Public", 150, "Marketing pages, docs, published prices", "Protect against tampering. No secrecy needed."],
+    ["Internal", 236, "Roadmaps, internal metrics, non-sensitive config", "Staff only, behind SSO."],
+    ["Confidential", 70, "Names, emails, user content, customer lists, invoices", "Encryption at rest, least-privilege access, access logs."],
+    ["Restricted", 27, "Password hashes, tokens, payment data, health data, government IDs, private keys", "Avoid storing. If you must: field-level encryption, managed keys, tight access, alerts on every read."]
+  ],
+  life: [
+    ["Collect", "Only what the feature needs, with a clear purpose and consent where required"],
+    ["Transmit", "TLS on every hop, including internal ones"],
+    ["Store", "Right region, encrypted, classified by tier"],
+    ["Use", "Permission-checked, logged, masked for support staff"],
+    ["Share", "DPA in place, minimum fields, vendor listed publicly"],
+    ["Retain", "A lifespan per data type, enforced by a scheduled job"],
+    ["Delete", "Hard delete, then let backups age it out on a known schedule"]
+  ],
+  access: {
+    cols: ["Prod database", "Cloud console", "Source code", "Secrets", "Backups", "Customer data"],
+    rows: [
+      ["Owner / founder", "jit|Just in time", "admin|Admin + key", "admin|Admin", "jit|Just in time", "jit|Just in time", "tool|Via admin tool"],
+      ["Engineer", "jit|Read-only, JIT", "scoped|Scoped", "scoped|Write via PR", "none|None", "none|None", "tool|Masked tool"],
+      ["Contractor", "none|None", "scoped|Staging only", "scoped|Their repos", "none|None", "none|None", "none|None"],
+      ["Support agent", "none|None", "none|None", "none|None", "none|None", "none|None", "tool|Masked tool"],
+      ["CI/CD pipeline", "scoped|Migrations", "scoped|Deploy role", "scoped|Read", "scoped|Deploy-time", "none|None", "none|None"],
+      ["App at runtime", "scoped|App role + RLS", "scoped|Own resources", "none|None", "scoped|Its own", "none|None", "scoped|Per user"],
+      ["Vendors", "none|None", "none|None", "none|None", "none|None", "none|None", "scoped|Minimum fields"]
+    ],
+    key: [
+      ["admin", "Admin", "full rights; rare, alarmed, hardware-key protected"],
+      ["jit", "Just in time", "time-limited, approved and logged"],
+      ["tool", "Tool", "through an audited internal tool that masks data"],
+      ["scoped", "Scoped", "only what that job needs"],
+      ["none", "None", "no access at all"]
+    ]
+  },
+  leaks: [
+    ["Code & config", [
+      ["API keys in git history", "Secret scanning with push protection; revoke and rotate, don't just delete the commit"],
+      ["Secret keys in the frontend bundle", "Only publishable keys in NEXT_PUBLIC_ / VITE_ variables; everything else server-side"],
+      [".env or .git served publicly", "Block dotfiles at the web server and CDN; deploy build output only"],
+      ["Debug mode and source maps in production", "Production config profile; upload source maps privately to your error tracker"]
+    ]],
+    ["Storage", [
+      ["Public storage buckets", "Account-wide block public access; signed URLs that expire"],
+      ["Open BaaS rules (Firebase, Supabase)", "Row-level security on every table; test rules in CI"],
+      ["Production copied into staging", "Synthetic seed data; anonymise if you truly need realistic data"],
+      ["Database dumps on laptops", "No production data locally; encrypted disks; audited exports only"]
+    ]],
+    ["APIs", [
+      ["Change the ID, see someone else's data", "Object-level permission checks plus ‘user A vs user B’ tests"],
+      ["Whole database rows in responses", "Explicit response fields; never serialise the full model"],
+      ["Stack traces in error messages", "Generic errors outside; details only in protected logs"],
+      ["CORS open to any origin", "An allow-list of your own origins, never ‘*’ with credentials"]
+    ]],
+    ["Logs & tools", [
+      ["Passwords and tokens in logs", "Redaction middleware and structured logging with denied fields"],
+      ["Session replay recording inputs", "Mask all inputs by default; exclude sensitive pages"],
+      ["Tokens in URLs leaking via Referer", "Tokens in headers or POST bodies; Referrer-Policy: strict-origin-when-cross-origin"],
+      ["Emails and IDs in analytics events", "Pseudonymous IDs; strip query strings before sending"]
+    ]],
+    ["People & vendors", [
+      ["Ex-staff still have access", "SSO everywhere and same-day offboarding checklist"],
+      ["Customer data pasted into AI chats", "Approved AI tools on business terms; clear staff policy"],
+      ["Admins phished", "Phishing-resistant MFA (security keys, passkeys) for every admin"],
+      ["Vendors receive more than they need", "Minimum fields, DPAs, yearly vendor review"]
+    ]],
+    ["Forgotten things", [
+      ["Dangling DNS records", "Remove records when you retire a service; scan for takeover risk"],
+      ["Old servers and test APIs still running", "Inventory and tag every resource; delete what has no owner"],
+      ["Lapsed domains", "Auto-renew and registrar lock on every domain you have ever used"],
+      ["Backups kept forever", "Retention rules on backups and snapshots, not only on live data"]
+    ]]
+  ]
+};
+
+/* ================= engine: the live One Supreme board ================= */
+(() => {
+"use strict";
+const BASE = BP.phases, TAGS = BP.tags, HQ = BP.hq;
+const TAG_ORDER = ["must", "sec", "data", "access", "leak"];
+const STATUS = { todo: "To do", doing: "In progress", done: "Done", na: "Not needed" };
+const OVERRIDES = ["t", "s", "d", "h", "l", "g"]; // fields MAIN may reword on a base check
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const str = v => typeof v === "string" ? v : (v == null ? "" : String(v)); // shared data is untrusted: coerce before use
+const slug = s => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const host = u => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch (e) { return ""; } };
+const day = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }); };
+const time = iso => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); };
+const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const G = { IW: 290, IH: 140, IGAP: 14, CW: 320, CGAP: 36, IND: 30, PW: 460, PHH: 184, TH: 84, BUS: 40,
+            PGAP: 180, RGAP: 360, DROP: 150, PER_ROW: 5, HQGAP: 380, ENDR: 150, RMGAP: 140 };
+
+/* ---- live project state: the artifact's db, or this browser when the page runs without one ---- */
+const S = { checks: {}, custom: {}, plan: {}, log: [], meta: {} };
+let PH = [], items = [], byKey = {}, byId = {};
+const stateOf = it => (it.custom ? S.custom[it.cid] : S.checks[it.key]) || {};
+const statusOf = it => { const s = str(stateOf(it).status); return STATUS[s] ? s : "todo"; };
+
+/* ---- model = base blueprint + One Supreme's rewording + ONE SUPREME's own checks ---- */
+function buildModel() {
+  PH = BASE.map((bp, pi) => {
+    const num = String(pi + 1).padStart(2, "0");
+    const p = { k: bp.k, h: bp.h, t: bp.t, b: bp.b, i: pi, num, hash: "step-" + num, total: 0, done: 0, na: 0, hits: 0 };
+    p.topics = bp.topics.map(bt => ({ t: bt.t, p, items: bt.items.map(bi => ({ ...bi, key: num + "-" + slug(bi.t) })) }));
+    return p;
+  });
+  Object.keys(S.custom).map(id => [id, S.custom[id]]).filter(([, c]) => c && str(c.t).trim())
+    .sort((a, b) => (+a[1].order || 0) - (+b[1].order || 0) || str(a[1].at).localeCompare(str(b[1].at)))
+    .forEach(([id, c]) => {
+      const p = PH.find(x => x.num === str(c.step).padStart(2, "0"));
+      if (!p) return;
+      const tn = str(c.topic).trim() || "One Supreme's own";
+      let t = p.topics.find(x => x.t.toLowerCase() === tn.toLowerCase());
+      if (!t) { t = { t: tn, p, items: [], mine: true }; p.topics.push(t); }
+      t.items.push({ t: c.t, s: c.s, d: c.d, h: c.h, l: c.l, g: c.g, cid: id, custom: true, key: "c-" + id });
+    });
+  items = []; byKey = {}; byId = {};
+  PH.forEach(p => p.topics.forEach((t, ti) => {
+    t.i = ti;
+    t.items.forEach((it, ii) => {
+      if (!it.custom) { const o = S.checks[it.key] || {}; OVERRIDES.forEach(f => { if (o[f] != null && o[f] !== "") it[f] = o[f]; }); }
+      it.t = str(it.t).slice(0, 160); it.s = str(it.s).slice(0, 400); it.d = str(it.d).slice(0, 2000);
+      it.h = Array.isArray(it.h) ? it.h.map(str).filter(Boolean).slice(0, 12) : [];
+      it.l = Array.isArray(it.l) ? it.l.filter(x => Array.isArray(x) && /^https?:\/\//i.test(str(x[1])))
+        .map(x => [str(x[0]) || host(str(x[1])), str(x[1])]).slice(0, 8) : [];
+      it.tags = str(it.g).split(/\s+/).filter(g => TAGS[g]);
+      it.p = p; it.tp = t; it.i = ii; it.idx = items.length;
+      it.tb = [it.t, it.s, it.d, it.h.join(" "), it.l.map(l => l[0] + " " + host(l[1])).join(" "), t.t, p.t,
+               it.tags.map(g => TAGS[g].label).join(" "), it.custom ? "one supreme own custom" : ""].join(" ").toLowerCase();
+      if (it.id) byId[it.id] = it;
+      byKey[it.key] = it; items.push(it); p.total++;
+    });
+  }));
+}
+
+/* ---- serpentine layout: rows of 5 steps, odd rows run right-to-left ---- */
+let rows = [], W = 0;
+const START = { x: 0, y: 0 }, END = { x: 0, y: 0 }, hq = { x: 0, y: 0, w: 0, h: 0 }, B = { x: 0, y: 0, w: 1, h: 1 };
+function layout() {
+  rows = [];
+  PH.forEach(p => {
+    const n = p.topics.length, m = Math.max(1, ...p.topics.map(t => t.items.length));
+    p.w = Math.max(G.PW, n * G.CW + (n - 1) * G.CGAP);
+    p.bh = G.PHH + G.BUS * 2 + G.TH + 22 + m * (G.IH + G.IGAP) - G.IGAP; // block height (p.h is the step's hue)
+  });
+  for (let i = 0; i < PH.length; i += G.PER_ROW) rows.push(PH.slice(i, i + G.PER_ROW));
+  W = Math.max(...rows.map(r => r.reduce((a, p) => a + p.w, 0) + (r.length - 1) * G.PGAP));
+  let y = 0;
+  rows.forEach((r, ri) => {
+    r.rtl = ri % 2 === 1; r.y = y; r.h = Math.max(...r.map(p => p.bh)); r.ty = y - G.DROP;
+    const used = r.reduce((a, p) => a + p.w, 0);
+    const gap = r.length > 1 ? Math.min((W - used) / (r.length - 1), G.PGAP * 2.2) : 0;
+    let x = r.rtl ? W : 0;
+    r.forEach(p => {
+      if (r.rtl) { x -= p.w; p.x = x; x -= gap; } else { p.x = x; x += p.w + gap; }
+      p.y = y; p.row = ri; p.sx = p.x + G.PW / 2;
+      p.topics.forEach((t, ti) => {
+        t.x = p.x + ti * (G.CW + G.CGAP); t.y = p.y + G.PHH + G.BUS * 2;
+        t.items.forEach((it, ii) => { it.x = t.x + G.IND; it.y = t.y + G.TH + 22 + ii * (G.IH + G.IGAP); });
+      });
+    });
+    y += r.h + G.RGAP;
+  });
+  START.x = -440; START.y = rows[0].ty;
+  const lr = rows[rows.length - 1], last = PH[PH.length - 1];
+  END.y = lr.ty; END.x = lr.rtl ? last.x - 440 : last.x + last.w + 440;
+}
+
+/* ---- the road + per-step trees, as one SVG ---- */
+const board = $("#board"), wires = $("#wires"), labels = $("#labels");
+function seg(a, b) {
+  if (a.y === b.y) return `M${a.x} ${a.y}H${b.x}`;
+  const right = !rows[a.r].rtl, ux = right ? W + 300 : -300, R = 170, s = right ? 1 : -1;
+  return `M${a.x} ${a.y}H${ux - s * R}Q${ux} ${a.y} ${ux} ${a.y + R}V${b.y - R}Q${ux} ${b.y} ${ux - s * R} ${b.y}H${b.x}`;
+}
+function renderWires() {
+  const stops = [{ x: START.x, y: START.y, h: PH[0].h, r: 0 }]
+    .concat(PH.map(p => ({ x: p.sx, y: rows[p.row].ty, h: p.h, r: p.row })))
+    .concat([{ x: END.x, y: END.y, h: PH[PH.length - 1].h, r: rows.length - 1 }]);
+  let defs = "", trunk = "", full = "", drops = "", trees = "", stations = "";
+  for (let i = 0; i < stops.length - 1; i++) {
+    const a = stops[i], b = stops[i + 1], d = seg(a, b);
+    defs += `<linearGradient id="tg${i}" gradientUnits="userSpaceOnUse" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}">` +
+      `<stop offset="0" class="hue stop" style="--h:${a.h}"/><stop offset="1" class="hue stop" style="--h:${b.h}"/></linearGradient>`;
+    trunk += `<path class="w-trunk" stroke="url(#tg${i})" d="${d}"/>`;
+    full += d;
+  }
+  PH.forEach(p => {
+    const T = p.topics, ty = rows[p.row].ty, c0 = T[0].x + G.CW / 2, cN = T[T.length - 1].x + G.CW / 2, busY = p.y + G.PHH + G.BUS;
+    drops += `<path class="w-drop hue" style="--h:${p.h}" d="M${p.sx} ${ty}V${p.y}"/>`;
+    let w = `M${c0} ${p.y + G.PHH}V${busY}M${c0} ${busY}H${cN}`, dots = `<circle class="w-dot" cx="${c0}" cy="${busY}" r="6"/>`;
+    T.forEach(t => {
+      const cx = t.x + G.CW / 2, vx = t.x + 15, n = t.items.length;
+      w += `M${cx} ${busY}V${t.y}`;
+      dots += `<circle class="w-dot" cx="${cx}" cy="${t.y}" r="7"/>`;
+      if (!n) return;
+      const last = t.items[n - 1], ly = last.y + G.IH / 2, r = 10;
+      w += `M${vx} ${t.y + G.TH}V${ly - r}Q${vx} ${ly} ${vx + r} ${ly}H${last.x}`;
+      t.items.slice(0, -1).forEach(it => { w += `M${vx} ${it.y + G.IH / 2}H${it.x}`; });
+    });
+    trees += `<g class="hue" style="--h:${p.h}"><path class="w-ph" d="${w}"/>${dots}</g>`;
+    stations += `<g class="hue" style="--h:${p.h}"><circle class="st-c" cx="${p.sx}" cy="${ty}" r="40"/><text class="st-t" x="${p.sx}" y="${ty}">${p.num}</text></g>`;
+  });
+  wires.innerHTML = `<defs>${defs}</defs>${trunk}<path class="w-dash" d="${full}"/>${drops}${trees}${stations}`;
+}
+function sizeWires() {
+  wires.setAttribute("viewBox", `${B.x} ${B.y} ${B.w} ${B.h}`);
+  wires.setAttribute("width", B.w); wires.setAttribute("height", B.h);
+  wires.style.left = B.x + "px"; wires.style.top = B.y + "px";
+}
+
+/* ---- cards ---- */
+const tagChips = tags => TAG_ORDER.filter(g => tags.includes(g))
+  .map(g => g === "must" ? '<span class="tg must">Must</span>' : `<span class="tg">${TAGS[g].glyph} ${TAGS[g].short}</span>`).join("");
+function footHtml(it) {
+  const st = statusOf(it);
+  return (st === "doing" ? '<span class="tg doing">● In progress</span>' : st === "na" ? '<span class="tg na">Not needed</span>' : "") +
+    (it.custom ? '<span class="tg mine">✦ Own</span>' : "") + tagChips(it.tags) +
+    (str(stateOf(it).note).trim() ? '<span class="tg nt">✎ Note</span>' : "") + (it.l.length ? `<span class="lk">↗ ${it.l.length}</span>` : "");
+}
+function renderNodes() {
+  board.querySelectorAll(".node").forEach(n => n.remove());
+  let h = "";
+  PH.forEach(p => {
+    h += `<section class="node pnode hue" data-p="${p.i}" style="--h:${p.h};left:${p.x}px;top:${p.y}px;width:${G.PW}px;height:${G.PHH}px">` +
+      `<div class="pn-top"><div class="pn-num">${p.num}</div><div><div class="pn-eyebrow">Step ${p.num} · ${p.topics.length} topics · ${p.total} checks</div>` +
+      `<h2 class="pn-title">${esc(p.t)}</h2></div></div><p class="pn-blurb">${esc(p.b)}</p>` +
+      `<div class="pn-foot"><div class="bar"><i></i></div><span class="pn-count">0/${p.total}</span></div></section>`;
+    p.topics.forEach(t => {
+      h += `<div class="node tnode hue${t.mine ? " mine" : ""}" data-p="${p.i}" data-t="${t.i}" style="--h:${p.h};left:${t.x}px;top:${t.y}px;width:${G.CW}px;height:${G.TH}px">` +
+        `<h3>${esc(t.t)}</h3><span class="tn-meta">${t.items.length} checks · <b class="tn-done">0</b> done</span></div>`;
+      t.items.forEach(it => {
+        h += `<article class="node item hue${it.custom ? " mine" : ""}" id="it${it.idx}" data-i="${it.idx}" style="--h:${p.h};left:${it.x}px;top:${it.y}px;width:${G.IW}px;height:${G.IH}px">` +
+          `<button class="open" type="button" data-open="${it.idx}">${esc(it.t)}</button><p class="s">${esc(it.s)}</p>` +
+          `<div class="f"></div><button class="chk" type="button" data-chk="${it.idx}" aria-pressed="false" aria-label="Mark done: ${esc(it.t)}">${CHECK}</button></article>`;
+      });
+    });
+  });
+  h += `<div class="node endpoint" data-go="step-01" role="button" tabindex="0" style="left:${START.x - G.ENDR}px;top:${START.y - G.ENDR}px;width:${G.ENDR * 2}px;height:${G.ENDR * 2}px">` +
+    `<span class="k">Start</span><span class="t">Your idea</span><span class="d">Follow the road through ${PH.length} steps</span></div>`;
+  h += `<div class="node endpoint" data-go="step-07" role="button" tabindex="0" style="left:${END.x - G.ENDR}px;top:${END.y - G.ENDR}px;width:${G.ENDR * 2}px;height:${G.ENDR * 2}px">` +
+    `<span class="k">Live</span><span class="t">Keep looping</span><span class="d">Every release runs steps 07 → 10 again</span></div>`;
+  board.insertAdjacentHTML("beforeend", h);
+  PH.forEach(p => {
+    p.el = board.querySelector(`.pnode[data-p="${p.i}"]`);
+    p.topics.forEach(t => { t.el = board.querySelector(`.tnode[data-p="${p.i}"][data-t="${t.i}"]`); });
+  });
+  items.forEach(it => { it.el = document.getElementById("it" + it.idx); });
+}
+function paintItem(it) {
+  const el = it.el; if (!el) return;
+  const st = statusOf(it), chk = el.querySelector(".chk");
+  el.classList.toggle("done", st === "done"); el.classList.toggle("st-doing", st === "doing"); el.classList.toggle("st-na", st === "na");
+  chk.setAttribute("aria-pressed", st === "done");
+  chk.setAttribute("aria-label", (st === "done" ? "Mark not done: " : "Mark done: ") + it.t);
+  el.querySelector(".f").innerHTML = footHtml(it);
+  const m = document.querySelector(`[data-mvs="${it.idx}"]`); if (m) m.classList.toggle("done", st === "done");
+}
+
+/* ---- Security HQ posters ---- */
+const HQ_TITLES = ["Security HQ", "Minimum viable security", "Ground rules", "Defence in depth", "Where your data lives",
+                   "Data sensitivity tiers", "The life of a record", "Who has access to what", "Where leaks happen"];
+let hqEl = null;
+function renderHQ() {
+  const cards = [], widths = [860, 780, 900, 760, 1240, 900, 720, 1240, 1320];
+  const card = (cls, inner) => cards.push(`<section class="hq-card ${cls}" style="width:${widths[cards.length]}px">${inner}</section>`);
+  card("hq-intro", `<div class="kicker">Read this first</div><h2>${HQ_TITLES[0]}</h2><p class="lede">${esc(HQ.lede)}</p>` +
+    `<div class="levers">${HQ.levers.map(([n, t, h]) => `<div class="lever hue" style="--h:${h}"><b>${esc(n)}</b><span>${esc(t)}</span></div>`).join("")}</div>` +
+    `<div class="hq-go"><button type="button" data-go="step-01">Start at step 01 →</button><button type="button" data-go="hq:1">The 12 must-dos</button></div>`);
+  card("", `<div class="kicker">If you only do twelve things</div><h2>${HQ_TITLES[1]}</h2>` +
+    `<p class="sub">Each line opens the matching card on the board. Ticks here follow the ticks there.</p><ul class="mvs">` +
+    HQ.mvs.map(([tx, id]) => { const it = byId[id]; return it ? `<li class="hue" data-mvs="${it.idx}" style="--h:${it.p.h}"><button type="button" data-open="${it.idx}">` +
+      `<span class="ck">${CHECK}</span><span class="tx">${esc(tx)}</span><span class="go">Step ${it.p.num} →</span></button></li>` : ""; }).join("") + `</ul>`);
+  card("", `<div class="kicker">Principles</div><h2>${HQ_TITLES[2]}</h2><p class="sub">Apply these at every step. When two options look equal, pick the one that follows more of them.</p>` +
+    `<div class="rules">${HQ.rules.map(([b, s]) => `<div class="rule"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join("")}</div>`);
+  let ring = `<div class="ring core"><b>${esc(HQ.core[0])}</b><span>${esc(HQ.core[1])}</span></div>`;
+  for (let i = HQ.rings.length - 1; i >= 0; i--) ring = `<div class="ring" style="--dep:${i}"><b>${esc(HQ.rings[i][0])}</b><span>${esc(HQ.rings[i][1])}</span>${ring}</div>`;
+  card("", `<div class="kicker">Layers</div><h2>${HQ_TITLES[3]}</h2><p class="sub">An attacker has to get through every ring. Build each ring as if the one outside it has already failed.</p>${ring}`);
+  card("", `<div class="kicker">Storage map</div><h2>${HQ_TITLES[4]}</h2><p class="sub">Personal data ends up in far more places than the database. Each place needs its own control.</p>` +
+    `<table class="tbl"><thead><tr><th>Where</th><th>What goes wrong</th><th>Control</th></tr></thead><tbody>` +
+    HQ.dataMap.map(([a, b, c]) => `<tr><td>${esc(a)}</td><td class="risk">${esc(b)}</td><td>${esc(c)}</td></tr>`).join("") + `</tbody></table>`);
+  card("", `<div class="kicker">Classification</div><h2>${HQ_TITLES[5]}</h2><p class="sub">Give every field in your data inventory one tier. Controls stack up as you go down.</p>` +
+    `<div class="tiers">${HQ.tiers.map(([n, h, ex, c]) => `<div class="tier hue" style="--h:${h}"><b>${esc(n)}</b><div><div class="ex">${esc(ex)}</div><div class="ctl">${esc(c)}</div></div></div>`).join("")}</div>`);
+  card("", `<div class="kicker">Lifecycle</div><h2>${HQ_TITLES[6]}</h2><p class="sub">Every piece of personal data passes through these seven stages, in this order.</p>` +
+    `<ol class="life">${HQ.life.map(([b, s], i) => `<li><span class="n">${i + 1}</span><div><b>${esc(b)}</b><span>${esc(s)}</span></div></li>`).join("")}</ol>`);
+  const A = HQ.access;
+  card("", `<div class="kicker">Access map</div><h2>${HQ_TITLES[7]}</h2><p class="sub">A starting point for a small team. Review it every quarter and whenever someone joins or leaves.</p>` +
+    `<table class="acc"><thead><tr><th></th>${A.cols.map(c => `<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>` +
+    A.rows.map(([r, ...cells]) => `<tr><td class="role">${esc(r)}</td>${cells.map(c => { const [k, v] = c.split("|"); return `<td class="${k}">${esc(v)}</td>`; }).join("")}</tr>`).join("") +
+    `</tbody></table><div class="acc-key">${A.key.map(([k, n, m]) => `<span><b class="${k}">${esc(n)}</b>${esc(m)}</span>`).join("")}</div>`);
+  card("", `<div class="kicker">Leak map</div><h2>${HQ_TITLES[8]}</h2><p class="sub">Most data leaks aren't clever hacks. They're one of these, and each has a known fix.</p>` +
+    `<div class="leaks">${HQ.leaks.map(([g, list]) => `<div class="lgroup"><h4>${esc(g)}</h4><ul>${list.map(([b, s]) => `<li><b>${esc(b)}</b><span>${esc(s)}</span></li>`).join("")}</ul></div>`).join("")}</div>`);
+  hqEl = document.createElement("div");
+  hqEl.className = "node hq";
+  hqEl.style.width = Math.max(W, widths.reduce((a, b) => a + b, 0) + 44 * (widths.length - 1)) + "px";
+  hqEl.innerHTML = cards.join("");
+  board.appendChild(hqEl);
+}
+function placeHQ() {
+  hq.w = hqEl.offsetWidth; hq.h = hqEl.offsetHeight; hq.x = 0; hq.y = rows[0].ty - G.HQGAP - hq.h;
+  hqEl.style.left = hq.x + "px"; hqEl.style.top = hq.y + "px";
+  let top = hq.y, right = hq.x + hq.w;
+  if (rm.on) { // the roadmap sits on top of everything
+    rm.w = rmEl.offsetWidth; rm.h = rmEl.offsetHeight; rm.x = 0; rm.y = hq.y - G.RMGAP - rm.h;
+    rmEl.style.left = rm.x + "px"; rmEl.style.top = rm.y + "px"; top = rm.y; right = Math.max(right, rm.x + rm.w);
+  }
+  const lastRow = rows[rows.length - 1];
+  const x1 = Math.min(START.x - G.ENDR, END.x - G.ENDR, -340) - 160, x2 = Math.max(W + 340, END.x + G.ENDR, right) + 160;
+  Object.assign(B, { x: x1, y: top - 160, w: x2 - x1, h: lastRow.y + lastRow.h + 160 - (top - 160) });
+  sizeWires();
+}
+function hqCardRect(i) { const c = hqEl.children[i]; return { x: hq.x + c.offsetLeft, y: hq.y + c.offsetTop, w: c.offsetWidth, h: c.offsetHeight }; }
+
+/* ---- roadmap: the plan items that have dates, as lanes on a timeline ---- */
+const RM = { DAY: 16, TW: 440, ROW: 46, LANE: 34, AX: 92, LGAP: 12 }; // px per day, title column, row, lane header, axis
+const LANE_HUES = [330, 255, 150, 55, 200, 100, 25, 290];
+const PILL = { now: "Now", next: "Next", later: "Later", done: "Done", late: "Late" };
+const CAL = '<svg class="cal" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>';
+const DAYMS = 864e5, LONG = { weekday: "short", day: "numeric", month: "short", year: "numeric" };
+const ymd = v => { // "2026-11-18" -> whole days since 1970 (UTC), NaN if it isn't a date
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str(v).slice(0, 10));
+  return m && +m[2] >= 1 && +m[2] <= 12 && +m[3] >= 1 && +m[3] <= 31 ? Date.UTC(+m[1], +m[2] - 1, +m[3]) / DAYMS : NaN;
+};
+const todayN = () => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAYMS; }; // the viewer's own date
+const dfmt = (n, o) => new Date(n * DAYMS).toLocaleDateString("en-GB", { timeZone: "UTC", ...o });
+const dshort = n => dfmt(n, { day: "numeric", month: "short" });
+const inDays = n => n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`;
+const rm = { x: 0, y: 0, w: 0, h: 0, on: false, lanes: [] };
+const rmEl = document.createElement("section");
+rmEl.className = "roadmap"; rmEl.hidden = true; rmEl.setAttribute("aria-label", "Roadmap");
+board.appendChild(rmEl);
+let building = false, curPlan = "", rmNav = null;
+const planOf = id => Object.prototype.hasOwnProperty.call(S.plan, id) && S.plan[id] && typeof S.plan[id] === "object" ? S.plan[id] : null;
+const laneHue = ln => { const i = rm.lanes.indexOf(ln); return i < 0 ? 266 : LANE_HUES[i % LANE_HUES.length]; };
+function planDates(x) { // [first day, last day]; a milestone is its due day
+  let a = ymd(x.start), b = ymd(x.due);
+  if (isNaN(b)) b = a;
+  if (isNaN(a) || x.milestone === true) a = b;
+  return a > b ? [b, a] : [a, b];
+}
+function planState(x, b, today) {
+  const s = str(x.state);
+  if (s === "done") return "done";
+  if (b < today) return "late";
+  return PILL[s] && s !== "late" ? s : "next";
+}
+function planChecks(x) { const seen = new Set(); return (Array.isArray(x.checks) ? x.checks : []).map(str).filter(k => byKey[k] && !seen.has(k) && seen.add(k)).map(k => byKey[k]); }
+function progOf(list) { let d = 0, a = 0; list.forEach(it => { const s = statusOf(it); if (s !== "na") { a++; if (s === "done") d++; } }); return { d, a }; }
+function renderRoadmap() {
+  if (building) return; // rebuild() draws it once at the end
+  const today = todayN(), M = S.meta, list = [];
+  Object.keys(S.plan).forEach(id => {
+    const x = planOf(id); if (!x || !str(x.title).trim()) return;
+    const [a, b] = planDates(x); if (isNaN(b)) return; // no dates: the side list only
+    list.push({ id, x, a, b, ms: x.milestone === true, ln: str(x.lane).trim().slice(0, 40) || "Other", st: planState(x, b, today), o: +x.order || 0 });
+  });
+  const was = rm.on;
+  rm.on = list.length > 0; rmEl.hidden = !rm.on;
+  if (rmNav) rmNav.parentElement.hidden = !rm.on;
+  if (labelEls.length) labelEls[labelEls.length - 1].style.display = rm.on ? "" : "none";
+  if (!rm.on) rmEl.textContent = "";
+  else {
+    let from = ymd(M.roadmap_from), to = ymd(M.roadmap_to);
+    if (isNaN(from)) from = Math.min(...list.map(r => r.a)) - 3;
+    if (isNaN(to)) to = Math.max(...list.map(r => r.b)) + 3;
+    if (to < from) [from, to] = [to, from];
+    to = Math.min(to, from + 400); // shortcut: one chart holds about 13 months; split the plan into phases if it ever runs longer
+    const X = d => RM.TW + (d - from) * RM.DAY, CW = RM.TW + (to - from + 1) * RM.DAY;
+    const lanes = [];
+    (Array.isArray(M.roadmap_lanes) ? M.roadmap_lanes : []).slice(0, 12).concat(list.map(r => r.ln))
+      .forEach(v => { const s = str(v).trim().slice(0, 40); if (s && !lanes.includes(s)) lanes.push(s); });
+    rm.lanes = lanes;
+    let y = RM.AX, lanesHtml = "";
+    lanes.forEach((ln, li) => {
+      const rs = list.filter(r => r.ln === ln).sort((p, q) => p.a - q.a || p.b - q.b || p.o - q.o);
+      if (!rs.length) return;
+      let rows = "";
+      rs.forEach((r, ri) => {
+        const pr = progOf(planChecks(r.x)), pct = r.st === "done" ? 100 : pr.a ? pr.d / pr.a * 100 : 0;
+        const a = Math.max(r.a, from), b = Math.min(r.b, to), vis = r.b >= from && r.a <= to;
+        const dt = r.a === r.b ? dshort(r.b) : `${dshort(r.a)} → ${dshort(r.b)}`, est = dt.length * 8 + 4;
+        let mark = "", x0 = RM.TW + 8, x1 = RM.TW + 8;
+        if (vis && r.ms) { const c = X(r.b) + RM.DAY / 2; mark = `<span class="rm-ms" style="left:${c}px"></span>`; x0 = c - 18; x1 = c + 18; }
+        else if (vis) { x0 = X(a) - 10; x1 = X(b + 1) + 10; mark = `<span class="rm-bar" style="left:${X(a)}px;width:${(b - a + 1) * RM.DAY}px"><i style="width:${pct}%"></i></span>`; }
+        else if (r.a > to) x0 = x1 = CW - 8;
+        // the date goes right of the bar; left when that would leave the chart; inside the end of a full-width bar
+        const [dl, dx] = x1 + est <= CW ? ["", x1] : x0 - est >= RM.TW ? [" l", x0] : [" l", X(b + 1) - 10];
+        rows += `<button type="button" class="rm-row ${r.st}" data-plan="${esc(r.id)}" style="top:${RM.LANE + ri * RM.ROW}px;height:${RM.ROW}px">` +
+          `<span class="rm-tt" style="width:${RM.TW - 30}px"><span class="rm-pill ${r.st}">${PILL[r.st]}</span><span class="rm-t">${esc(str(r.x.title))}</span>` +
+          (pr.a ? `<span class="rm-pr">${pr.d}/${pr.a}</span>` : "") + `</span>${mark}<span class="rm-dt${dl}" style="left:${dx}px">${esc(dt)}</span></button>`;
+      });
+      const h = RM.LANE + rs.length * RM.ROW;
+      lanesHtml += `<div class="rm-lane hue" style="--h:${LANE_HUES[li % LANE_HUES.length]};top:${y}px;height:${h}px">` +
+        `<div class="rm-ln"><i></i>${esc(ln)}<span>${rs.length}</span></div>${rows}</div>`;
+      y += h + RM.LGAP;
+    });
+    const CH = y - RM.LGAP;
+    let axis = "", grid = "";
+    for (let d = from; d <= to; d++) {
+      const t = new Date(d * DAYMS), dom = t.getUTCDate();
+      if (d === from || dom === 1) {
+        const end = Math.min(to + 1, Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 1) / DAYMS);
+        axis += `<div class="rm-month" style="left:${X(d)}px;width:${(end - d) * RM.DAY}px">${esc(dfmt(d, d === from || t.getUTCMonth() === 0 ? { month: "long", year: "numeric" } : { month: "long" }))}</div>`;
+        if (d !== from) grid += `<i class="rm-vl m" style="left:${X(d)}px;top:28px;height:${CH - 28}px"></i>`;
+      }
+      if (t.getUTCDay() === 1) {
+        axis += `<div class="rm-week" style="left:${X(d)}px">${dom}</div>`;
+        grid += `<i class="rm-vl" style="left:${X(d)}px;top:56px;height:${CH - 56}px"></i>`;
+      }
+    }
+    (Array.isArray(M.roadmap_breaks) ? M.roadmap_breaks : []).slice(0, 12).forEach(k => {
+      if (!k || typeof k !== "object") return;
+      let a = ymd(k.from), b = ymd(k.to); if (isNaN(a) || isNaN(b)) return; if (a > b) [a, b] = [b, a];
+      a = Math.max(a, from); b = Math.min(b, to); if (a > b) return;
+      const lab = str(k.label).trim().slice(0, 60);
+      grid += `<div class="rm-break" style="left:${X(a)}px;top:${RM.AX - 6}px;width:${(b - a + 1) * RM.DAY}px;height:${CH - RM.AX + 6}px">${lab ? `<span>${esc(lab)}</span>` : ""}</div>`;
+    });
+    if (today > from) grid += `<div class="rm-past" style="left:${RM.TW}px;top:${RM.AX - 6}px;width:${(Math.min(today, to + 1) - from) * RM.DAY}px;height:${CH - RM.AX + 6}px"></div>`;
+    if (today >= from && today <= to) grid += `<div class="rm-today" style="left:${X(today) + RM.DAY / 2}px;top:0;height:${CH}px"><span>Today · ${esc(dshort(today))}</span></div>`;
+    const nextMs = list.filter(r => r.ms && r.st !== "done" && r.b >= today).sort((p, q) => p.b - q.b)[0];
+    const counts = ["now", "late", "next", "later", "done"].map(s => [s, list.filter(r => r.st === s).length]).filter(c => c[1]);
+    const name = str(M.name).trim() || "One Supreme", note = str(M.roadmap_note).trim().slice(0, 300);
+    rmEl.style.width = CW + 74 + "px"; // the chart plus the card's padding and border
+    rmEl.innerHTML = `<header class="rm-head"><div><div class="kicker">${CAL} Roadmap · ${esc(dfmt(from, { day: "numeric", month: "short", year: "numeric" }))} → ${esc(dfmt(to, { day: "numeric", month: "short", year: "numeric" }))}</div>` +
+      `<h2><img src="icon.png" alt="">${esc(name)} roadmap</h2>${note ? `<p class="sub">${esc(note)}</p>` : ""}</div><div class="rm-stats">` +
+      (nextMs ? `<div class="rm-stat"><span>Next milestone</span><b>${esc(dshort(nextMs.b))}</b><span>${esc(str(nextMs.x.title).slice(0, 80))} · ${inDays(nextMs.b - today)}</span></div>` : "") +
+      `<div class="rm-stat big"><span>${today > to ? "Finished" : "Days to go"}</span><b>${Math.max(0, to - today)}</b><span>to ${esc(dshort(to))}</span></div>` +
+      `<div class="rm-stat"><span>On the plan</span><div class="rm-counts">${counts.map(([s, c]) => `<span class="rm-pill ${s}">${c} ${PILL[s]}</span>`).join("")}</div></div></div></header>` +
+      `<div class="rm-chart" style="width:${CW}px;height:${CH}px">${grid}${lanesHtml}${axis}</div>` +
+      `<footer class="rm-key"><span><i class="rm-pill now">Now</i>being worked on</span><span><i class="rm-pill next">Next</i>coming up</span>` +
+      `<span><i class="rm-pill later">Later</i>after that</span><span><i class="rm-pill late">Late</i>past its date, not done</span>` +
+      `<span><i class="rm-kd"></i>milestone</span><span><i class="rm-kb"></i>a bar fills as its checks are ticked</span><span>Click a row to see and tick its checks.</span></footer>`;
+    if (curPlan) { const r = rmEl.querySelector(`[data-plan="${CSS.escape(curPlan)}"]`); if (r) r.classList.add("sel"); }
+  }
+  placeHQ(); placeLabels(); drawMini();
+  if (was !== rm.on && !touched && !panel.classList.contains("open") && !location.hash) home(true);
+}
+
+/* ---- zoomed-out labels, side list, lenses ---- */
+let labelEls = [];
+function renderLabels() {
+  let h = `<div class="olabel hql" data-go="hq"><span class="ol-n">◎</span><span><span class="ol-t">Security HQ</span><span class="ol-m"></span></span></div>`;
+  PH.forEach(p => { h += `<div class="olabel hue" data-go="${p.hash}" style="--h:${p.h}"><span class="ol-n">${p.num}</span><span><span class="ol-t">${esc(p.t)}</span>` +
+    `<span class="ol-m"></span><span class="ol-p"></span></span></div>`; });
+  h += `<div class="olabel rml" data-go="roadmap"${rm.on ? "" : ' style="display:none"'}><span class="ol-n">${CAL}</span><span><span class="ol-t">Roadmap</span><span class="ol-m"></span></span></div>`;
+  labels.innerHTML = h;
+  labelEls = [...labels.children]; // [Security HQ, the steps..., Roadmap]
+}
+let curNav = null, hqNav = null;
+function renderNav() {
+  let h = `<li${rm.on ? "" : " hidden"}><a href="#roadmap" class="hqlink rmlink" data-go="roadmap"><span class="sn">${CAL}</span><span class="stt">Roadmap</span><span class="sc">dates &amp; milestones</span></a></li>` +
+    `<li><a href="#hq" class="hqlink" data-go="hq"><span class="sn">◎</span><span class="stt">Security HQ</span><span class="sc">read first</span></a>` +
+    `<div class="hqsub">${HQ_TITLES.slice(1).map((t, i) => `<a href="#hq" data-go="hq:${i + 1}">${esc(t)}</a>`).join("")}</div></li>`;
+  PH.forEach(p => { h += `<li><a href="#${p.hash}" class="hue" data-go="${p.hash}" style="--h:${p.h}"><span class="sn">${p.num}</span>` +
+    `<span class="stt">${esc(p.t)}</span><span class="sc">0/${p.total}</span><span class="bar"><i></i></span></a></li>`; });
+  $("#steps").innerHTML = h;
+  PH.forEach(p => { p.nav = $(`#steps a[data-go="${p.hash}"]`); });
+  hqNav = $('#steps a[data-go="hq"]'); rmNav = $('#steps a[data-go="roadmap"]'); curNav = null;
+  if (!$("#legend").childElementCount) {
+    $("#legend").innerHTML = TAG_ORDER.map(g => `<div>${g === "must" ? '<span class="tg must">Must</span>' : `<span class="tg">${TAGS[g].glyph} ${TAGS[g].short}</span>`}<span>${esc(TAGS[g].label)}</span></div>`).join("") +
+      `<div><span class="tg doing">● Doing</span><span>In progress</span></div><div><span class="tg mine">✦ Own</span><span>Added for One Supreme</span></div>`;
+    $("#lenses").innerHTML = TAG_ORDER.map(g => `<button type="button" class="lens ${g}" data-lens="${g}" aria-pressed="false" title="Highlight: ${esc(TAGS[g].label)}"><span class="g">${TAGS[g].glyph}</span>${esc(TAGS[g].chip)}</button>`).join("");
+  }
+}
+
+/* ================= view, interaction ================= */
+const vp = $("#viewport"), nav = $("#nav"), tools = $("#tools"), panel = $("#panel"), pBody = $("#pBody"), crumb = $("#pCrumb");
+const pPrev = $("#pPrev"), pNext = $("#pNext"), pDone = $("#pDone"), q = $("#q"), qcount = $("#qcount"), zPct = $("#zPct");
+const mini = $("#mini"), mctx = mini.getContext("2d"), hint = $("#hint"), toastEl = $("#toast"), stf = $("#stf");
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage blocked: fine for conveniences */ } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* storage blocked: nothing kept anyway */ } }
+};
+let toastT = 0;
+function toast(msg) { toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 4500); }
+
+const V = { x: 0, y: 0, k: 1 }, KMIN = 0.03, KMAX = 2.6;
+let lod = "near", raf = 0, settle = 0, anim = 0;
+function schedule() { if (document.hidden) { apply(); return; } if (!raf) raf = requestAnimationFrame(apply); } // hidden pages get no frames
+function apply() {
+  if (raf) { cancelAnimationFrame(raf); raf = 0; }
+  board.style.transform = `translate(${V.x}px,${V.y}px) scale(${V.k})`;
+  let s = 24; while (s * V.k < 14) s *= 4;
+  vp.style.backgroundSize = `${s * V.k}px ${s * V.k}px`;
+  vp.style.backgroundPosition = `${V.x}px ${V.y}px`;
+  const l = V.k < 0.24 ? "far" : V.k < 0.48 ? "mid" : "near";
+  if (l !== lod) { board.classList.replace("lod-" + lod, "lod-" + l); labels.classList.toggle("on", l === "far"); lod = l; }
+  placeLabels(); drawMini(); markCurrent();
+  zPct.textContent = Math.round(V.k * 100) + "%";
+  board.classList.add("moving"); clearTimeout(settle); settle = setTimeout(() => board.classList.remove("moving"), 160);
+}
+function area() {
+  const w = innerWidth, h = innerHeight, narrow = w < 760, open = panel.classList.contains("open");
+  return { l: !narrow && !nav.classList.contains("collapsed") ? nav.offsetWidth + 32 : 16, t: narrow ? 150 : tools.offsetHeight + 32,
+           r: w - (open && !narrow ? panel.offsetWidth + 32 : 16), b: h - (open && narrow ? panel.offsetHeight + 16 : 16) };
+}
+function zoomAt(sx, sy, f) { const k = clamp(V.k * f, KMIN, KMAX); f = k / V.k; V.x = sx - (sx - V.x) * f; V.y = sy - (sy - V.y) * f; V.k = k; schedule(); }
+function zoomTo(sx, sy, f) { const k = clamp(V.k * f, KMIN, KMAX), r = k / V.k; fly({ k, x: sx - (sx - V.x) * r, y: sy - (sy - V.y) * r }); }
+function stopFly() { cancelAnimationFrame(anim); anim = 0; }
+function fly(T, instant) {
+  stopFly();
+  if (instant || reduced || document.hidden) { Object.assign(V, T); schedule(); return; }
+  const S0 = { ...V }, t0 = performance.now(), dur = 720, cx = innerWidth / 2, cy = innerHeight / 2;
+  const sc = { x: (cx - S0.x) / S0.k, y: (cy - S0.y) / S0.k }, tc = { x: (cx - T.x) / T.k, y: (cy - T.y) / T.k };
+  const lk0 = Math.log(S0.k), lk1 = Math.log(T.k);
+  const step = now => {
+    let u = Math.min(1, (now - t0) / dur); u = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+    const k = Math.exp(lk0 + (lk1 - lk0) * u);
+    V.k = k; V.x = cx - (sc.x + (tc.x - sc.x) * u) * k; V.y = cy - (sc.y + (tc.y - sc.y) * u) * k;
+    apply();
+    anim = u < 1 ? requestAnimationFrame(step) : 0;
+  };
+  anim = requestAnimationFrame(step);
+}
+function fitRect(r, o = {}) {
+  const A = area(), aw = Math.max(80, A.r - A.l), ah = Math.max(80, A.b - A.t), pad = o.pad == null ? 40 : o.pad;
+  const k = clamp(Math.min((aw - pad * 2) / r.w, (ah - pad * 2) / r.h), o.min || KMIN, o.max || 1.2);
+  let x = A.l + (aw - r.w * k) / 2 - r.x * k, y = A.t + (ah - r.h * k) / 2 - r.y * k;
+  if (o.top && r.h * k > ah - pad * 2) y = A.t + pad - r.y * k;
+  if (o.left && r.w * k > aw - pad * 2) x = A.l + pad - r.x * k;
+  fly({ x, y, k }, o.instant);
+}
+const fitAll = instant => fitRect(B, { pad: 24, max: 1, instant });
+function centerOn(bx, by, k) { const A = area(); fly({ k, x: (A.l + A.r) / 2 - bx * k, y: (A.t + A.b) / 2 - by * k }); }
+function phaseRect(p) { return { x: p.x - 40, y: rows[p.row].ty - 70, w: p.w + 80, h: p.bh + G.DROP + 70 }; }
+function home(instant) { if (rm.on) navTo("roadmap", instant); else fitAll(instant); } // the office screen's resting view
+function navTo(h, instant) {
+  if (h === "roadmap") { if (rm.on) fitRect(rm, { pad: 28, min: 0.25, max: 1, top: true, left: true, instant }); else fitAll(instant); return; }
+  if (h === "hq") {
+    const a = hqCardRect(0), b = hqCardRect(1), A = area(), both = { x: a.x, y: a.y, w: b.x + b.w - a.x, h: Math.max(a.h, b.h) };
+    const readable = Math.min((A.r - A.l - 80) / both.w, (A.b - A.t - 80) / both.h) >= 0.55; // two posters only if text stays legible
+    fitRect(readable ? both : a, { min: 0.45, max: 0.95, top: true, instant });
+    return;
+  }
+  if (h.startsWith("hq:")) { fitRect(hqCardRect(+h.slice(3)), { min: 0.45, max: 0.95, top: true, instant }); return; }
+  const p = PH.find(x => x.hash === h);
+  if (p) fitRect(phaseRect(p), { min: 0.6, max: 1, top: true, left: true, instant });
+}
+function flyTopic(t) {
+  const h = G.TH + 22 + t.items.length * (G.IH + G.IGAP);
+  fitRect({ x: t.x - 20, y: t.y - 20, w: G.CW + 40, h: h + 40 }, { min: 0.7, max: 1.1, top: true });
+}
+function revealItem(it, force) {
+  const A = area(), k0 = V.k, sx = V.x + it.x * k0, sy = V.y + it.y * k0;
+  const visible = sx >= A.l && sx + G.IW * k0 <= A.r && sy >= A.t && sy + G.IH * k0 <= A.b;
+  if (!force && visible && k0 >= 0.48) return;
+  centerOn(it.x + G.IW / 2, it.y + G.IH / 2, force ? clamp(k0, 0.9, 1.15) : Math.max(k0, 0.8));
+}
+function fromHash(instant) {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (h === "hq" || h === "roadmap" || PH.some(p => p.hash === h)) { navTo(h, instant); return true; }
+  return false;
+}
+let touched = false; // until the viewer moves the board, a resize re-fits the overview (the host may start us at 0×0)
+function go(h) {
+  touched = true;
+  navTo(h);
+  if (!h.includes(":")) { try { history.replaceState(null, "", "#" + h); } catch (e) { /* sandboxed: the link just won't update */ } }
+}
+addEventListener("hashchange", () => fromHash(false));
+function placeLabels() {
+  if (lod !== "far") return;
+  const pts = [{ x: hq.x + hq.w / 2, y: hq.y + hq.h / 2, w: hq.w * 0.3 }].concat(PH.map(p => ({ x: p.x + p.w / 2, y: p.y + p.bh * 0.42, w: p.w })),
+    [{ x: rm.x + rm.w / 2, y: rm.y + rm.h / 2, w: rm.w * 0.6 }]);
+  const tight = Math.min(...PH.map(p => p.w)) * V.k * 0.94 < 112; // too small for titles: every step shows its number only
+  labelEls.forEach((el, i) => {
+    const p = pts[i], room = p.w * V.k * 0.94, step = i > 0 && i <= PH.length;
+    el.classList.toggle("compact", step && tight);
+    el.style.maxWidth = Math.min(300, Math.max(step ? 56 : 150, room)) + "px";
+    el.style.transform = `translate(${V.x + p.x * V.k}px,${V.y + p.y * V.k}px) translate(-50%,-50%)`;
+  });
+}
+function markCurrent() {
+  let el = null;
+  if (V.k >= 0.2) {
+    const A = area(), bx = ((A.l + A.r) / 2 - V.x) / V.k, by = ((A.t + A.b) / 2 - V.y) / V.k;
+    if (rm.on && by < hq.y - G.RMGAP / 2) el = rmNav;
+    else if (by < rows[0].ty - G.HQGAP / 2) el = hqNav;
+    else {
+      let bd = Infinity;
+      PH.forEach(p => {
+        const dx = Math.max(p.x - bx, 0, bx - p.x - p.w), dy = Math.max(p.y - G.DROP - by, 0, by - p.y - p.bh), d = dx * dx + dy * dy;
+        if (d < bd) { bd = d; el = p.nav; }
+      });
+    }
+  }
+  if (el !== curNav) { if (curNav) curNav.classList.remove("cur"); if (el) el.classList.add("cur"); curNav = el; }
+}
+
+/* ---- pointer: drag to pan, pinch to zoom; wheel; keys ---- */
+const pts = new Map();
+let drag = null, pinch = null, moved = false, suppress = false, lastTrackpad = -1e9;
+function startPinch() {
+  const [a, b] = [...pts.values()];
+  pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, k: V.k, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, vx: V.x, vy: V.y };
+  drag = null; moved = true;
+}
+vp.addEventListener("pointerdown", e => {
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  stopFly(); hideHint(); suppress = false;
+  pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pts.size === 1) { drag = { id: e.pointerId, x: e.clientX, y: e.clientY, vx: V.x, vy: V.y }; moved = false; }
+  else if (pts.size === 2) { startPinch(); try { for (const id of pts.keys()) vp.setPointerCapture(id); } catch (err) { /* pointer already gone */ } }
+});
+vp.addEventListener("pointermove", e => {
+  if (!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pts.size >= 2) {
+    const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const k = clamp(pinch.k * d / pinch.d, KMIN, KMAX), f = k / pinch.k;
+    V.k = k; V.x = mx - (pinch.mx - pinch.vx) * f; V.y = my - (pinch.my - pinch.vy) * f; schedule();
+    return;
+  }
+  if (!drag || drag.id !== e.pointerId) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!moved && Math.hypot(dx, dy) > 5) { moved = true; vp.classList.add("grabbing"); try { vp.setPointerCapture(e.pointerId); } catch (err) { /* gone */ } }
+  if (moved) { V.x = drag.vx + dx; V.y = drag.vy + dy; schedule(); }
+});
+function endPointer(e) {
+  if (!pts.has(e.pointerId)) return;
+  pts.delete(e.pointerId);
+  if (moved) suppress = true;
+  if (pts.size < 2) pinch = null;
+  if (pts.size === 1) { const [id, p] = [...pts.entries()][0]; drag = { id, x: p.x, y: p.y, vx: V.x, vy: V.y }; }
+  if (!pts.size) { drag = null; vp.classList.remove("grabbing"); }
+}
+vp.addEventListener("pointerup", endPointer);
+vp.addEventListener("pointercancel", endPointer);
+vp.addEventListener("wheel", e => {
+  e.preventDefault(); stopFly(); hideHint();
+  let dx = e.deltaX, dy = e.deltaY;
+  if (e.deltaMode === 1) { dx *= 16; dy *= 16; } else if (e.deltaMode === 2) { dx *= innerHeight; dy *= innerHeight; }
+  // shortcut: wheels send big whole-number steps, trackpads small or fractional ones; upgrade to a setting if a device is misread
+  const looksWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
+  if (!looksWheel && !e.ctrlKey) lastTrackpad = e.timeStamp;
+  const wheel = looksWheel && e.timeStamp - lastTrackpad > 600;
+  if (e.ctrlKey || e.metaKey) zoomAt(e.clientX, e.clientY, Math.exp(-dy * (wheel ? 0.0016 : 0.01)));
+  else if (wheel) zoomAt(e.clientX, e.clientY, Math.exp(-dy * 0.0016));
+  else { V.x -= dx; V.y -= dy; schedule(); }
+}, { passive: false });
+vp.addEventListener("dblclick", e => { if (!e.target.closest(".node,.olabel,.roadmap")) zoomTo(e.clientX, e.clientY, 1.8); });
+vp.addEventListener("scroll", () => { vp.scrollTop = 0; vp.scrollLeft = 0; }); // focus must never scroll the board element itself
+vp.addEventListener("click", e => {
+  if (suppress) { suppress = false; return; }
+  const t = e.target, kbd = e.detail === 0;
+  const chk = t.closest("[data-chk]"); if (chk) { const it = items[+chk.dataset.chk]; setStatus(it, statusOf(it) === "done" ? "todo" : "done"); return; }
+  const op = t.closest("[data-open]"); if (op) { openItem(+op.dataset.open, { fly: !!t.closest(".hq"), kbd }); return; }
+  const pl = t.closest("[data-plan]"); if (pl) { touched = true; openPlan(pl.dataset.plan, { kbd }); return; }
+  const g = t.closest("[data-go]"); if (g) { go(g.dataset.go); return; }
+  const tn = t.closest(".tnode"); if (tn) { flyTopic(PH[+tn.dataset.p].topics[+tn.dataset.t]); return; }
+  const pn = t.closest(".pnode"); if (pn) go(PH[+pn.dataset.p].hash);
+});
+vp.addEventListener("keydown", e => {
+  const g = e.target.closest && e.target.closest(".endpoint[data-go]");
+  if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(g.dataset.go); }
+});
+board.addEventListener("focusin", e => { const n = e.target.closest(".item"); if (n) revealItem(items[+n.dataset.i], false); });
+
+/* ---- detail panel: content, status and notes ---- */
+let cur = -1, noteDirty = false;
+function seq() { return (filtering && hits.length && hits.includes(items[cur])) ? hits : items; }
+function whoLine(o) { return str(o.by) ? esc(str(o.by)) + (o.at ? " · " + esc(day(o.at) + " " + time(o.at)) : "") : ""; }
+function renderPanel(it) {
+  const p = it.p, t = it.tp, st = statusOf(it), o = stateOf(it);
+  panel.classList.add("hue"); panel.classList.remove("planmode"); panel.style.setProperty("--h", p.h);
+  crumb.innerHTML = `<span class="cn">${p.num}</span><span class="ct">${esc(p.t)} / ${esc(t.t)}</span>`;
+  const tagsHtml = TAG_ORDER.filter(g => it.tags.includes(g))
+    .map(g => g === "must" ? '<span class="tg must">Must before launch</span>' : `<span class="tg">${TAGS[g].glyph} ${esc(TAGS[g].label)}</span>`).join("");
+  pBody.innerHTML = `<h2 id="pTitle" tabindex="-1">${esc(it.t)}</h2>` + (it.custom ? '<span class="mineflag">✦ Added for One Supreme</span>' : "") +
+    (tagsHtml ? `<div class="ptags">${tagsHtml}</div>` : "") +
+    `<div class="pstat" role="group" aria-label="Status">${Object.keys(STATUS).map(k => `<button type="button" data-st="${k}" aria-pressed="${k === st}"${canWrite ? "" : " disabled"}>${STATUS[k]}</button>`).join("")}</div>` +
+    `<div class="pnote"><div class="pnote-h"><span>Notes</span><span id="pWho">${whoLine(o)}</span></div>` +
+    (canWrite ? `<textarea id="pNoteTx" maxlength="2000" placeholder="What was done and where, or why it isn't needed">${esc(str(o.note))}</textarea>` +
+                `<div class="row"><button type="button" id="pNoteSave">Save note</button></div>`
+              : `<p class="ro">${esc(str(o.note)) || "No notes yet."}</p>`) +
+    (str(o.ref) ? `<p class="ref">Evidence: ${esc(str(o.ref))}</p>` : "") + `</div>` +
+    `<p class="lede">${esc(it.s)}</p>${it.d ? `<p>${esc(it.d)}</p>` : ""}` +
+    (it.h.length ? `<h3>How to do it</h3><ol class="how">${it.h.map(x => `<li>${esc(x)}</li>`).join("")}</ol>` : "") +
+    (it.l.length ? `<h3>Resources</h3><ul class="links">${it.l.map(([n, u]) => `<li><a href="${esc(u)}" target="_blank" rel="noopener noreferrer"><span>${esc(n)}</span><small>${esc(host(u))}</small></a></li>`).join("")}</ul>` : "") +
+    `<p class="pos">Check ${it.i + 1} of ${t.items.length} in “${esc(t.t)}” · ${it.idx + 1} of ${items.length} overall</p>`;
+  noteDirty = false;
+  syncDone(it);
+  const s = seq(), pos = s.indexOf(it);
+  pPrev.disabled = pos <= 0; pNext.disabled = pos >= s.length - 1;
+}
+function refreshOpenPanel(keys) {
+  if (curPlan && panel.classList.contains("open")) { const top = pBody.scrollTop; renderPlanPanel(); pBody.scrollTop = top; return; }
+  if (cur < 0 || !panel.classList.contains("open")) return;
+  const it = items[cur];
+  if (keys && !keys.includes(it.key)) return;
+  if (!noteDirty) { const top = pBody.scrollTop; renderPanel(it); pBody.scrollTop = top; return; }
+  // the viewer is typing a note: refresh status and author only, never their text
+  const st = statusOf(it);
+  pBody.querySelectorAll("[data-st]").forEach(b => b.setAttribute("aria-pressed", b.dataset.st === st));
+  const w = $("#pWho"); if (w) w.innerHTML = whoLine(stateOf(it));
+  syncDone(it);
+}
+function openItem(i, o = {}) {
+  const it = items[i]; if (!it) return;
+  if (cur >= 0 && items[cur] && items[cur].el) items[cur].el.classList.remove("sel");
+  if (curPlan) { curPlan = ""; markPlanSel(); }
+  cur = i; it.el.classList.add("sel");
+  renderPanel(it); pBody.scrollTop = 0;
+  const wasOpen = panel.classList.contains("open");
+  panel.classList.add("open"); panel.setAttribute("aria-hidden", "false"); document.body.classList.add("panel-open");
+  if (o.kbd) $("#pTitle").focus({ preventScroll: true });
+  if (wasOpen || o.fly) revealItem(it, o.fly); else setTimeout(() => revealItem(it, false), 30);
+}
+function closePanel() {
+  if (!panel.classList.contains("open")) return;
+  const inside = panel.contains(document.activeElement);
+  const back = inside && cur >= 0 ? items[cur].el.querySelector(".open") : inside && curPlan ? rmEl.querySelector(`[data-plan="${CSS.escape(curPlan)}"]`) : null;
+  panel.classList.remove("open"); panel.setAttribute("aria-hidden", "true"); document.body.classList.remove("panel-open");
+  if (cur >= 0 && items[cur]) items[cur].el.classList.remove("sel");
+  if (back) back.focus({ preventScroll: true });
+  cur = -1; noteDirty = false; curPlan = ""; markPlanSel();
+}
+/* a roadmap item in the panel: its dates and why, and its checks to tick or open */
+function markPlanSel() {
+  rmEl.querySelectorAll(".rm-row.sel").forEach(r => r.classList.remove("sel"));
+  if (curPlan) { const r = rmEl.querySelector(`[data-plan="${CSS.escape(curPlan)}"]`); if (r) r.classList.add("sel"); }
+}
+function renderPlanPanel() {
+  const x = planOf(curPlan); if (!x) { closePanel(); return; }
+  const today = todayN(), [a, b] = planDates(x), ms = x.milestone === true, ln = str(x.lane).trim() || "Other";
+  const st = planState(x, b, today); // no due date (NaN) is never late
+  const list = planChecks(x), pr = progOf(list), when = str(x.when).trim();
+  const dates = isNaN(b) ? "" : a === b ? dfmt(b, LONG) : `${dfmt(a, LONG)} → ${dfmt(b, LONG)}`;
+  panel.classList.add("hue", "planmode"); panel.style.setProperty("--h", laneHue(ln));
+  crumb.innerHTML = `<span class="cn">${CAL}</span><span class="ct">Roadmap / ${esc(ln)}${ms ? " · milestone" : ""}</span>`;
+  pBody.innerHTML = `<h2 id="pTitle" tabindex="-1">${esc(str(x.title))}</h2>` +
+    `<div class="pplan"><span class="rm-pill ${st}">${PILL[st]}</span>${dates ? `<span>${esc(dates)}</span>` : ""}${when ? `<span>· ${esc(when)}</span>` : ""}</div>` +
+    (str(x.why).trim() ? `<p class="lede">${esc(str(x.why))}</p>` : "") +
+    (list.length ? `<h3>Its checks · ${pr.d} of ${pr.a} done</h3><ul class="pchecks">` + list.map(it => {
+      const s = statusOf(it);
+      return `<li class="hue ${s}" style="--h:${it.p.h}"><button type="button" class="pc-chk" data-pchk="${it.idx}" aria-pressed="${s === "done"}" ` +
+        `aria-label="${s === "done" ? "Mark not done" : "Mark done"}: ${esc(it.t)}"${canWrite ? "" : " disabled"}>${CHECK}</button>` +
+        `<button type="button" class="pc-open" data-popen="${it.idx}"><span>${esc(it.t)}</span><small>Step ${it.p.num} · ${STATUS[s]}</small></button></li>`;
+    }).join("") + `</ul>` : `<p class="pos">No checks are linked to this yet.</p>`) +
+    (str(x.by) ? `<p class="pos">Planned by ${whoLine(x)}</p>` : "");
+}
+function openPlan(id, o = {}) {
+  if (!planOf(id)) return;
+  if (cur >= 0 && items[cur] && items[cur].el) items[cur].el.classList.remove("sel");
+  cur = -1; noteDirty = false; curPlan = id;
+  renderPlanPanel(); pBody.scrollTop = 0; markPlanSel();
+  panel.classList.add("open"); panel.setAttribute("aria-hidden", "false"); document.body.classList.add("panel-open");
+  if (o.kbd) $("#pTitle").focus({ preventScroll: true });
+}
+function stepItem(d) { if (cur < 0) return; const s = seq(), next = s[s.indexOf(items[cur]) + d]; if (next) openItem(next.idx, { fly: true }); }
+function syncDone(it) {
+  const st = statusOf(it);
+  pDone.setAttribute("aria-pressed", st === "done"); pDone.textContent = st === "done" ? "Done ✓  (undo)" : "Mark as done";
+  pDone.disabled = !canWrite;
+}
+$("#pClose").addEventListener("click", closePanel);
+pPrev.addEventListener("click", () => stepItem(-1));
+pNext.addEventListener("click", () => stepItem(1));
+pDone.addEventListener("click", () => { if (cur >= 0) { const it = items[cur]; setStatus(it, statusOf(it) === "done" ? "todo" : "done"); } });
+pBody.addEventListener("click", e => {
+  const pc = e.target.closest("[data-pchk]"); if (pc && !pc.disabled) { const it = items[+pc.dataset.pchk]; if (it) setStatus(it, statusOf(it) === "done" ? "todo" : "done"); return; }
+  const po = e.target.closest("[data-popen]"); if (po) { openItem(+po.dataset.popen, { fly: true, kbd: e.detail === 0 }); return; }
+  if (cur < 0) return;
+  const b = e.target.closest("[data-st]"); if (b && !b.disabled) { setStatus(items[cur], b.dataset.st); return; }
+  if (e.target.closest("#pNoteSave")) { const tx = $("#pNoteTx"); if (tx) { noteDirty = false; writeState(items[cur], { note: tx.value.trim().slice(0, 2000) }); } }
+});
+pBody.addEventListener("input", e => { if (e.target.id === "pNoteTx") noteDirty = true; });
+
+/* ================= live data ================= */
+let db = null, canWrite = true, api = false; // db: the claude.ai artifact store; api: the office site's /api/board
+const LOCAL = "one-supreme-blueprint:local", KEYSTORE = "one-supreme-board-key";
+let apiKey = store.get(KEYSTORE, "") || "", etag = "", pendingWrites = 0;
+const queue = {};
+function setStatus(it, st) { if (STATUS[st] && st !== statusOf(it)) writeState(it, { status: st }); }
+function writeState(it, patch) {
+  if (!canWrite) { toast("This view can only read the board."); return; }
+  const at = new Date().toISOString(), by = "Board";
+  if (it.custom) S.custom = { ...S.custom, [it.cid]: { ...S.custom[it.cid], ...patch, by, at } };
+  else S.checks = { ...S.checks, [it.key]: { ...S.checks[it.key], ...patch, by, at } };
+  paintItem(it); refreshProgress(); drawMini(); if (filtering) applyFilter(); refreshOpenPanel([it.key]);
+  if (api) {
+    // a base check's doc is replaced whole (keeping MAIN's fields); a custom one is merged
+    const w = it.custom ? { op: "merge", col: "custom", id: it.cid, data: { ...patch, by, at } } : { op: "set", col: "checks", id: it.key, data: { ...S.checks[it.key] } };
+    const run = () => post([w]);
+    queue[it.key] = (queue[it.key] || Promise.resolve()).then(run, run);
+    return;
+  }
+  if (!db) { store.set(LOCAL, S.checks); return; }
+  // one write at a time per check; a base check's doc is replaced whole (keeping MAIN's fields), a custom one is merged
+  const body = it.custom ? { ...patch, by, at } : { ...S.checks[it.key] };
+  const ref = it.custom ? db.collection("custom").doc(it.cid) : db.collection("checks").doc(it.key);
+  const run = () => (it.custom ? ref.update(body) : ref.set(body)).catch(onWriteError);
+  queue[it.key] = (queue[it.key] || Promise.resolve()).then(run, run);
+}
+function onWriteError(e) {
+  const code = e && e.code;
+  if (code === "invalid_argument" || code === "revoked" || code === "not_granted") {
+    canWrite = false; toast("Not saved: this view can only read the board."); refreshOpenPanel();
+  } else if (code === "quota_exceeded") toast("Not saved: the board's storage is full. Ask ONE SUPREME to tidy old log entries.");
+  else toast("Not saved: the board couldn't be reached. Try again in a moment.");
+}
+
+/* ---- search, lenses, status filter ---- */
+let lens = null, terms = [], stFilter = "", hits = [], hitPos = -1, filtering = false;
+const plural = n => `${n} match${n === 1 ? "" : "es"}`;
+function stMatch(it) {
+  const st = statusOf(it);
+  return !stFilter || (stFilter === "open" ? st === "todo" || st === "doing" : stFilter === "mine" ? !!it.custom : st === stFilter);
+}
+function applyFilter() {
+  filtering = !!(lens || terms.length || stFilter);
+  board.classList.toggle("filtering", filtering);
+  hits = [];
+  items.forEach(it => {
+    const txt = terms.length ? it.tb + " " + str(stateOf(it).note).toLowerCase() : "";
+    it.hit = filtering && (!lens || it.tags.includes(lens)) && stMatch(it) && terms.every(w => txt.includes(w));
+    it.el.classList.toggle("hit", it.hit);
+    if (it.hit) hits.push(it);
+  });
+  PH.forEach(p => {
+    let pc = 0;
+    p.topics.forEach(t => { const c = t.items.filter(x => x.hit).length; t.el.classList.toggle("hit", c > 0); pc += c; });
+    p.el.classList.toggle("hit", pc > 0); p.hits = pc;
+  });
+  hitPos = -1;
+  qcount.textContent = filtering ? plural(hits.length) : "";
+  navCounts(); drawMini();
+  if (cur >= 0) { const s = seq(), pos = s.indexOf(items[cur]); pPrev.disabled = pos <= 0; pNext.disabled = pos >= s.length - 1; }
+}
+function nextHit(d) {
+  if (!hits.length) return;
+  hitPos = (hitPos + d + hits.length) % hits.length;
+  openItem(hits[hitPos].idx, { fly: true });
+  qcount.textContent = `${hitPos + 1} / ${hits.length}`;
+}
+let qT = 0;
+q.addEventListener("input", () => { clearTimeout(qT); qT = setTimeout(() => { terms = q.value.toLowerCase().split(/\s+/).filter(Boolean); applyFilter(); }, 110); });
+$("#qNext").addEventListener("click", () => nextHit(1));
+$("#qPrev").addEventListener("click", () => nextHit(-1));
+$("#lenses").addEventListener("click", e => {
+  const b = e.target.closest("[data-lens]"); if (!b) return;
+  lens = lens === b.dataset.lens ? null : b.dataset.lens;
+  document.querySelectorAll("#lenses .lens").forEach(x => x.setAttribute("aria-pressed", x.dataset.lens === lens));
+  applyFilter();
+});
+stf.addEventListener("change", () => { stFilter = stf.value; applyFilter(); });
+function clearFilters() {
+  lens = null; terms = []; stFilter = ""; q.value = ""; stf.value = "";
+  document.querySelectorAll("#lenses .lens").forEach(x => x.setAttribute("aria-pressed", "false"));
+  applyFilter();
+}
+
+/* ---- keyboard + controls ---- */
+addEventListener("keydown", e => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") {
+    if (e.target === q && e.key === "Escape") { clearFilters(); q.blur(); }
+    else if (e.target === q && e.key === "Enter") { e.preventDefault(); nextHit(e.shiftKey ? -1 : 1); } // other fields keep Enter
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  touched = true;
+  const open = panel.classList.contains("open"), inFloat = !!(e.target.closest && e.target.closest(".float"));
+  const c = { x: innerWidth / 2, y: innerHeight / 2 };
+  switch (e.key) {
+    case "/": q.focus(); q.select(); break;
+    case "f": case "F": case "0": fitAll(); break;
+    case "+": case "=": zoomTo(c.x, c.y, 1.35); break;
+    case "-": case "_": zoomTo(c.x, c.y, 1 / 1.35); break;
+    case "Escape": if (open) closePanel(); else if (filtering) clearFilters(); else return; break;
+    case "ArrowLeft": if (open) stepItem(-1); else if (!inFloat) { V.x += 140; schedule(); } else return; break;
+    case "ArrowRight": if (open) stepItem(1); else if (!inFloat) { V.x -= 140; schedule(); } else return; break;
+    case "ArrowUp": if (inFloat) return; V.y += 140; schedule(); break;
+    case "ArrowDown": if (inFloat) return; V.y -= 140; schedule(); break;
+    default: return;
+  }
+  e.preventDefault();
+});
+$("#zIn").addEventListener("click", () => zoomTo(innerWidth / 2, innerHeight / 2, 1.35));
+$("#zOut").addEventListener("click", () => zoomTo(innerWidth / 2, innerHeight / 2, 1 / 1.35));
+$("#zFit").addEventListener("click", () => fitAll());
+$("#navBody").addEventListener("click", e => {
+  const pl = e.target.closest("[data-plan]");
+  if (pl) { touched = true; openPlan(pl.dataset.plan, { kbd: e.detail === 0 }); if (innerWidth < 760) setNav(true, false); return; }
+  const k = e.target.closest("[data-key]");
+  if (k) { const it = byKey[k.dataset.key]; if (it) { touched = true; openItem(it.idx, { fly: true }); } if (innerWidth < 760) setNav(true, false); return; }
+  const a = e.target.closest("#steps [data-go]"); if (!a) return;
+  e.preventDefault(); go(a.dataset.go);
+  if (innerWidth < 760) setNav(true, false);
+});
+const navToggle = $("#navToggle");
+let navPref = store.get("sab:nav", null); // null = the viewer never chose; follow the screen width
+function setNav(collapsed, remember) {
+  nav.classList.toggle("collapsed", collapsed);
+  navToggle.setAttribute("aria-expanded", !collapsed);
+  navToggle.setAttribute("aria-label", collapsed ? "Show the step list" : "Hide the step list");
+  if (remember) { navPref = collapsed; store.set("sab:nav", collapsed); }
+}
+navToggle.addEventListener("click", () => setNav(!nav.classList.contains("collapsed"), true));
+function hideHint() { touched = true; if (!hint.classList.contains("gone")) { hint.classList.add("gone"); store.set("sab:hint", 1); } }
+
+/* ---- side panel: plan, latest, project ---- */
+function firstKey(list) { return Array.isArray(list) ? list.map(str).find(k => byKey[k]) || "" : ""; }
+function renderPlan() {
+  renderRoadmap(); if (curPlan) refreshOpenPanel();
+  const ORDER = { now: 0, next: 1, later: 2 }, el = $("#planList");
+  const list = Object.keys(S.plan).map(id => ({ id, ...planOf(id) }))
+    .filter(x => str(x.title).trim() && str(x.state) !== "done")
+    .sort((a, b) => (ORDER[a.state] ?? 3) - (ORDER[b.state] ?? 3) || (+a.order || 0) - (+b.order || 0));
+  if (!list.length) {
+    el.innerHTML = `<li class="empty">${db || api ? "No plan yet. In ONE SUPREME, say “Run the blueprint review”." : "ONE SUPREME's plan shows here when the board is opened on its site."}</li>`;
+    return;
+  }
+  const shown = list.slice(0, 7);
+  el.innerHTML = shown.map(x => {
+    const st = ORDER[x.state] != null ? x.state : "next", k = firstKey(x.checks), it = byKey[k];
+    const sub = [str(x.when), it ? "Step " + it.p.num + ": " + it.t : ""].filter(Boolean).join(" · ");
+    return `<li><button type="button" data-plan="${esc(x.id)}"><span class="pill ${st}">${st}</span>` +
+      `<span class="tt">${esc(str(x.title))}</span>${sub ? `<span class="wh">${esc(sub)}</span>` : ""}</button></li>`;
+  }).join("") + (list.length > shown.length ? `<li class="empty">+ ${list.length - shown.length} more on the roadmap</li>` : "");
+}
+function renderLog() {
+  const el = $("#logList"), list = S.log.filter(x => str(x.text).trim()).slice(0, 5);
+  if (!list.length) { el.innerHTML = `<li class="empty">${db || api ? "Nothing yet. ONE SUPREME notes here what it ticks and why." : "Nothing yet."}</li>`; return; }
+  el.innerHTML = list.map(x => {
+    const k = firstKey(x.checks);
+    return `<li><button type="button"${k ? ` data-key="${esc(k)}"` : ""}><span class="tm">${esc(day(x.at))}<br>${esc(time(x.at))}</span>` +
+      `<span class="tx">${esc(str(x.text))}</span><span class="by">${esc(str(x.by) || "ONE SUPREME")}</span></button></li>`;
+  }).join("");
+}
+function renderMeta() {
+  renderRoadmap();
+  const name = str(S.meta.name).trim() || "One Supreme";
+  $("#navTitle").textContent = name + " Blueprint";
+  const about = $("#about"), a = str(S.meta.about).trim();
+  about.hidden = !a; about.textContent = a;
+  $("#navSub").textContent = `${items.length} checks`;
+}
+
+/* ---- progress: "not needed" checks leave the count ---- */
+function navCounts() {
+  PH.forEach((p, i) => {
+    const sc = p.nav.querySelector(".sc"), app = p.total - p.na;
+    sc.classList.toggle("m", filtering);
+    sc.textContent = filtering ? (p.hits ? plural(p.hits) : "none") : `${p.done}/${app}`;
+    const lab = labelEls[i + 1];
+    if (lab) { lab.querySelector(".ol-m").textContent = filtering && p.hits ? plural(p.hits) : ""; lab.querySelector(".ol-p").textContent = filtering ? "" : `${p.done}/${app} done`; }
+  });
+}
+function refreshProgress() {
+  let done = 0, app = 0;
+  PH.forEach(p => {
+    p.done = 0; p.na = 0;
+    p.topics.forEach(t => {
+      let d = 0;
+      t.items.forEach(it => { const st = statusOf(it); if (st === "done") d++; else if (st === "na") p.na++; });
+      p.done += d; t.el.querySelector(".tn-done").textContent = d;
+    });
+    const a = p.total - p.na, pct = a ? (p.done / a * 100) + "%" : "100%";
+    p.el.querySelector(".bar i").style.width = pct; p.nav.querySelector(".bar i").style.width = pct;
+    p.el.querySelector(".pn-count").textContent = `${p.done}/${a}`;
+    done += p.done; app += a;
+  });
+  $("#ovCount").textContent = `${done} / ${app}`; $("#ovBar").style.width = (app ? done / app * 100 : 0) + "%";
+  navCounts(); renderRoadmap(); // the roadmap's bars fill as their checks are ticked
+}
+
+/* ---- minimap ---- */
+let MT = null, C = null;
+function themeColors() {
+  const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
+  return { L: v("--pL"), Cc: v("--pC"), tL: v("--tL"), tC: v("--tC"), hqs: v("--hq-soft"), acc: v("--accent"), doing: v("--doing") };
+}
+function sizeMini() {
+  const w = mini.clientWidth, h = mini.clientHeight; if (!w) return;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  mini.width = Math.round(w * dpr); mini.height = Math.round(h * dpr); mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  C = themeColors(); drawMini();
+}
+function drawMini() {
+  const w = mini.clientWidth, h = mini.clientHeight; if (!w || !C || !PH.length) return;
+  const s = Math.min((w - 12) / B.w, (h - 12) / B.h), ox = (w - B.w * s) / 2 - B.x * s, oy = (h - B.h * s) / 2 - B.y * s;
+  MT = { s, ox, oy };
+  mctx.clearRect(0, 0, w, h);
+  mctx.fillStyle = C.hqs; mctx.fillRect(ox + hq.x * s, oy + hq.y * s, hq.w * s, hq.h * s);
+  if (rm.on) mctx.fillRect(ox + rm.x * s, oy + rm.y * s, rm.w * s, rm.h * s);
+  PH.forEach(p => { mctx.fillStyle = `oklch(${C.tL} ${C.tC} ${p.h})`; mctx.fillRect(ox + p.x * s, oy + p.y * s, p.w * s, p.bh * s); });
+  items.forEach(it => {
+    const st = statusOf(it);
+    const a = filtering ? (it.hit ? 1 : 0.1) : st === "done" ? 1 : st === "na" ? 0.1 : 0.42;
+    mctx.fillStyle = st === "doing" && !filtering ? C.doing : `oklch(${C.L} ${C.Cc} ${it.p.h} / ${a})`;
+    mctx.fillRect(ox + it.x * s, oy + it.y * s, Math.max(1, G.IW * s), Math.max(1, G.IH * s));
+  });
+  PH.forEach(p => { mctx.fillStyle = `oklch(${C.L} ${C.Cc} ${p.h})`; mctx.fillRect(ox + p.x * s, oy + p.y * s, G.PW * s, G.PHH * s); });
+  mctx.strokeStyle = C.acc; mctx.lineWidth = 1.5;
+  mctx.strokeRect(ox + (-V.x / V.k) * s, oy + (-V.y / V.k) * s, innerWidth / V.k * s, innerHeight / V.k * s);
+}
+function miniJump(e) {
+  if (!MT) return;
+  const r = mini.getBoundingClientRect(), bx = (e.clientX - r.left - MT.ox) / MT.s, by = (e.clientY - r.top - MT.oy) / MT.s, A = area();
+  V.x = (A.l + A.r) / 2 - bx * V.k; V.y = (A.t + A.b) / 2 - by * V.k; schedule();
+}
+mini.addEventListener("pointerdown", e => { stopFly(); hideHint(); try { mini.setPointerCapture(e.pointerId); } catch (err) { /* gone */ } miniJump(e); mini.onpointermove = miniJump; });
+mini.addEventListener("pointerup", () => { mini.onpointermove = null; });
+mini.addEventListener("pointercancel", () => { mini.onpointermove = null; });
+const retheme = () => { C = themeColors(); drawMini(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class", "style"] });
+
+/* ---- (re)build the whole board from the model; keeps the view, filters and open card ---- */
+function rebuild() {
+  const keep = cur >= 0 && items[cur] ? items[cur].key : null;
+  building = true; // the roadmap waits until the model is complete
+  buildModel(); layout(); renderNodes(); renderHQ(); placeHQ(); renderWires(); renderLabels(); renderNav();
+  items.forEach(paintItem); refreshProgress(); renderPlan(); renderLog(); renderMeta();
+  building = false; renderRoadmap();
+  cur = -1;
+  if (curPlan && planOf(curPlan) && panel.classList.contains("open")) renderPlanPanel();
+  else if (keep && byKey[keep] && panel.classList.contains("open")) { const it = byKey[keep]; cur = it.idx; it.el.classList.add("sel"); renderPanel(it); }
+  else if (panel.classList.contains("open")) closePanel();
+  if (filtering) applyFilter();
+  apply();
+}
+const mapOf = snap => { const m = {}; snap.docs.forEach(d => { const v = d.data(); if (v && typeof v === "object" && !Array.isArray(v)) m[d.id] = v; }); return m; };
+const shapeOf = m => JSON.stringify(Object.keys(m).sort().map(k => { const { status, note, ref, by, at, ...rest } = m[k]; return [k, rest]; }));
+function onChecks(next) {
+  const prev = S.checks; S.checks = next;
+  const changed = [];
+  let structural = false;
+  new Set([...Object.keys(prev), ...Object.keys(next)]).forEach(k => {
+    const a = prev[k] || {}, b = next[k] || {};
+    if (OVERRIDES.some(f => JSON.stringify(a[f]) !== JSON.stringify(b[f]))) structural = true;
+    else if (a !== b) changed.push(k);
+  });
+  if (structural) { rebuild(); return; }
+  if (!changed.length) return;
+  changed.forEach(k => { if (byKey[k]) paintItem(byKey[k]); });
+  refreshProgress(); if (filtering) applyFilter(); drawMini(); refreshOpenPanel(changed);
+}
+function onCustom(next) {
+  const prev = S.custom; S.custom = next;
+  if (shapeOf(prev) !== shapeOf(next)) { rebuild(); return; }
+  const changed = Object.keys(next).filter(id => prev[id] !== next[id]).map(id => "c-" + id);
+  changed.forEach(k => { if (byKey[k]) paintItem(byKey[k]); });
+  if (changed.length) { refreshProgress(); if (filtering) applyFilter(); drawMini(); refreshOpenPanel(changed); }
+}
+const liveEl = $("#live");
+function setLive(s, text) { liveEl.dataset.s = s; liveEl.textContent = text; }
+async function connect() {
+  let d = null;
+  try { d = window.claude && typeof window.claude.use === "function" ? await window.claude.use("db") : null; } catch (e) { d = null; }
+  if (!d) {
+    if (!window.claude && /^https?:$/.test(location.protocol) && await connectApi()) return;
+    setLive("off", "this browser only");
+    $("#syncNote").textContent = "Not connected: ticks stay in this browser. Open the board on its site to see ONE SUPREME's work.";
+    const local = store.get(LOCAL, null);
+    if (local && typeof local === "object") { S.checks = local; rebuild(); }
+    renderPlan(); renderLog();
+    return;
+  }
+  db = d;
+  try { const u = await window.claude.use("user"); if (u) canWrite = (await u.can("data.write")) !== false; } catch (e) { /* unknown: keep inputs, a refused write decides */ }
+  setLive("slow", "loading");
+  const need = new Set(["checks", "custom", "plan", "log", "meta"]);
+  const timer = setTimeout(() => { if (need.size) setLive("slow", "waiting for data"); }, 10000);
+  const landed = (k, meta) => { if (meta && meta.fromCache) return; need.delete(k); if (!need.size) { clearTimeout(timer); setLive("on", "live"); } };
+  const fail = () => e => { clearTimeout(timer); setLive("slow", "may be out of date"); if (e && (e.code === "revoked" || e.code === "not_granted")) canWrite = false; };
+  db.collection("checks").onSnapshot(snap => { onChecks(mapOf(snap)); landed("checks", snap.metadata); }, fail());
+  db.collection("custom").onSnapshot(snap => { onCustom(mapOf(snap)); landed("custom", snap.metadata); }, fail());
+  db.collection("plan").onSnapshot(snap => { S.plan = mapOf(snap); renderPlan(); landed("plan", snap.metadata); }, fail());
+  db.collection("log").orderBy("at", "desc").limit(30).onSnapshot(snap => {
+    S.log = snap.docs.map(x => ({ id: x.id, ...(x.data() || {}) })); renderLog(); landed("log", snap.metadata);
+  }, fail());
+  db.doc("meta/project").onSnapshot(x => { S.meta = (x.exists && x.data()) || {}; renderMeta(); landed("meta", x.metadata); }, fail());
+}
+
+/* ---- the office site: /api/board, unlocked with the passcode ---- */
+const lockEl = $("#lock"), lockMsg = $("#lockMsg"), lockKey = $("#lockKey"), lockBtn = $("#lockBtn");
+const objOf = v => (v && typeof v === "object" && !Array.isArray(v)) ? v : {};
+const docsOf = v => { const m = {}; Object.entries(objOf(v)).forEach(([k, d]) => { if (d && typeof d === "object" && !Array.isArray(d)) m[k] = d; }); return m; };
+function apiFetch(method, body) {
+  const h = { "x-board-key": apiKey };
+  if (body) h["content-type"] = "application/json";
+  if (method === "GET" && etag) h["if-none-match"] = etag;
+  return fetch("/api/board", { method, headers: h, body: body ? JSON.stringify(body) : undefined, cache: "no-store" });
+}
+function applyBoard(b) {
+  S.plan = docsOf(b.plan);
+  S.log = Object.entries(docsOf(b.log)).map(([id, v]) => ({ id, ...v })).sort((x, y) => str(y.at).localeCompare(str(x.at))).slice(0, 30);
+  S.meta = docsOf(b.meta).project || {};
+  onChecks(docsOf(b.checks)); onCustom(docsOf(b.custom));
+  renderPlan(); renderLog(); renderMeta();
+}
+function showLock(msg) {
+  apiKey = ""; etag = ""; store.del(KEYSTORE);
+  closePanel();
+  S.checks = {}; S.custom = {}; S.plan = {}; S.log = []; S.meta = {}; rebuild(); // nothing of the project's stays on screen
+  lockMsg.textContent = msg || ""; lockEl.hidden = false; lockBtn.hidden = true;
+  setLive("off", "locked");
+  setTimeout(() => lockKey.focus(), 50);
+}
+async function handle(r) {
+  if (!r) { setLive("slow", "offline, retrying"); return; }
+  if (r.status === 304) { setLive("on", "live"); return; }
+  if (r.status === 401) { showLock(apiKey ? "That passcode no longer works. Enter the new one." : ""); return; }
+  if (r.status === 503) { showLock("The passcode isn't set up on Netlify yet."); return; }
+  if (!r.ok) { setLive("slow", "board error, retrying"); return; }
+  let b; try { b = await r.json(); } catch (e) { setLive("slow", "board error, retrying"); return; }
+  etag = r.headers.get("etag") || "";
+  lockEl.hidden = true; lockBtn.hidden = false;
+  applyBoard(b); setLive("on", "live");
+}
+async function poll(force) {
+  if (!api || !apiKey || pendingWrites || (document.hidden && !force)) return;
+  let r = null; try { r = await apiFetch("GET"); } catch (e) { r = null; }
+  handle(r);
+}
+async function post(writes) {
+  pendingWrites++;
+  let r = null; try { r = await apiFetch("POST", { writes }); } catch (e) { r = null; }
+  pendingWrites--;
+  if (!r) { toast("Not saved: couldn't reach the board. Try again in a moment."); return; }
+  if (r.status === 401) { showLock("That passcode no longer works. Enter the new one."); return; }
+  if (!r.ok) { let m = ""; try { m = str((await r.json()).error); } catch (e) { m = ""; } toast("Not saved: " + (m || "the board refused it.")); return; }
+  etag = r.headers.get("etag") || etag;
+  try { applyBoard(await r.json()); } catch (e) { /* the next check-in catches up */ }
+}
+async function connectApi() {
+  let r = null;
+  try { r = await apiFetch("GET"); } catch (e) { r = null; }
+  if (r && r.status === 404) return false; // no board API here (a plain copy of the page): keep ticks in this browser
+  api = true;
+  $("#syncNote").textContent = "Ticks, notes and the roadmap are shared with ONE SUPREME. The board checks for changes every minute.";
+  setInterval(() => poll(false), 60000); // shortcut: a check-in each minute, not a live stream; fine for one office screen
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) poll(true); });
+  await handle(r);
+  return true;
+}
+$("#lockForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const k = lockKey.value.trim(), go = $("#lockGo");
+  if (!k) return;
+  go.disabled = true; lockMsg.textContent = ""; apiKey = k; etag = "";
+  let r = null; try { r = await apiFetch("GET"); } catch (err) { r = null; }
+  go.disabled = false;
+  if (r && r.ok) { store.set(KEYSTORE, k); lockKey.value = ""; await handle(r); return; }
+  apiKey = "";
+  lockMsg.textContent = !r ? "Can't reach the board. Check the internet connection." : r.status === 401 ? "That passcode didn't work." :
+    r.status === 503 ? "The passcode isn't set up on Netlify yet." : "The board isn't answering. Try again in a minute.";
+});
+lockBtn.addEventListener("click", () => showLock("Locked. Enter the passcode to open the board again."));
+
+/* ---- office screen mode: stay awake, drift back to the overview when nobody's touching it ---- */
+const screenBtn = $("#screenBtn");
+let screenOn = false, wake = null, idleT = 0;
+async function holdWake() {
+  if (!screenOn || document.hidden || wake || !navigator.wakeLock) return;
+  try { wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", () => { wake = null; }); } catch (e) { /* refused: the screen may sleep */ }
+}
+function bumpIdle() {
+  clearTimeout(idleT);
+  if (screenOn) idleT = setTimeout(() => { closePanel(); home(); touched = false; }, 120000);
+}
+function setScreen(on, remember) {
+  screenOn = on; document.body.classList.toggle("screen", on); screenBtn.setAttribute("aria-pressed", on);
+  if (remember) store.set("hbp:screen", on);
+  if (on) { holdWake(); bumpIdle(); hint.classList.add("gone"); }
+  else { clearTimeout(idleT); if (wake) { wake.release().catch(() => {}); wake = null; } }
+}
+screenBtn.addEventListener("click", () => setScreen(!screenOn, true));
+["pointerdown", "wheel", "keydown"].forEach(t => addEventListener(t, bumpIdle, { passive: true }));
+document.addEventListener("visibilitychange", () => { if (!document.hidden) holdWake(); });
+setScreen(/[?&]screen\b/.test(location.search) || store.get("hbp:screen", false), false);
+
+/* ---- boot ---- */
+rebuild();
+setNav(navPref == null ? innerWidth < 760 : navPref, false);
+if (store.get("sab:hint", 0)) hint.classList.add("gone");
+home(true); apply(); sizeMini();
+if (location.hash) fromHash(true); // a shared #step-05 link opens on that step; anything else keeps the overview
+addEventListener("resize", () => {
+  if (navPref == null) setNav(innerWidth < 760, false);
+  sizeMini();
+  if (!touched && !panel.classList.contains("open")) { home(true); if (location.hash) fromHash(true); }
+  schedule();
+});
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {
+  placeHQ(); placeLabels(); drawMini();
+  if (!touched && !panel.classList.contains("open")) { home(true); if (location.hash) fromHash(true); } // text sizes moved the roadmap
+});
+setInterval(renderRoadmap, 3600000); // shortcut: hourly redraw moves "today" and the days left; fine for a board that runs all day
+connect();
+})();
+</script>

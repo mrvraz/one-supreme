@@ -1,0 +1,42 @@
+{% extends "hub/base.html" %}
+{% block title %}Notification settings · {{ SITE_NAME }}{% endblock %}
+{% block content %}
+<div class="narrow">
+  <a class="back" href="{% url 'settings' %}">{% include "hub/_icon.html" with name="back" %}Settings</a>
+  <h1>Notifications</h1>
+  <section class="card">
+    <h2>Push notifications on this device</h2>
+    {% if vapid_key %}
+    <p class="small muted">Get a buzz on your phone or computer. On an iPhone, first add {{ SITE_NAME }} to your home screen (Share, then "Add to Home Screen") and open it from there.</p>
+    <p class="small" data-push-status aria-live="polite">You have push switched on for {{ devices }} device{{ devices|pluralize }}.</p>
+    <div class="actions" style="justify-content: flex-start">
+      <button class="btn primary" type="button" data-push-enable="{{ vapid_key }}" data-subscribe="{% url 'push_subscribe' %}">Turn on for this device</button>
+      <button class="btn" type="button" data-push-disable data-unsubscribe="{% url 'push_unsubscribe' %}">Turn off for this device</button>
+      {% if devices %}<form method="post" action="{% url 'push_test' %}">{% csrf_token %}<button class="btn">Send me a test</button></form>{% endif %}
+    </div>
+    {% else %}<p class="small muted">Push notifications aren't set up on this server yet. You'll still see everything under Notifications.</p>{% endif %}
+  </section>
+  <form method="post">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<div class="msg error">{{ form.non_field_errors }}</div>{% endif %}
+    <section class="card">
+      <h2>Quiet times</h2>
+      <p class="small muted">During quiet times nothing buzzes. Notifications still collect in the app. Use the bell in the Menu to switch Do not disturb on straight away.</p>
+      <div class="field"><label for="{{ form.dnd_from.id_for_label }}">{{ form.dnd_from.label }}</label>{{ form.dnd_from }}</div>
+      <div class="field"><label for="{{ form.dnd_to.id_for_label }}">{{ form.dnd_to.label }}</label>{{ form.dnd_to }}</div>
+      <label class="switch"><span>{{ form.dnd_weekends.label }}</span>{{ form.dnd_weekends }}</label>
+    </section>
+    <section class="card flat list">
+      <div class="row"><span class="row-body"><span class="row-title">What to tell you about</span></span><span class="row-side"><b class="switch-col">Push</b><b class="switch-col">Email</b></span></div>
+      {% for label, push, email in form.rows %}
+      <div class="row"><span class="row-body">{{ label }}</span><span class="row-side"><label class="switch" style="padding: 0"><span class="sr-only">Push: {{ label }}</span>{{ push }}</label><label class="switch" style="padding: 0"><span class="sr-only">Email: {{ label }}</span>{{ email }}</label></span></div>
+      {% endfor %}
+    </section>
+    <section class="card">
+      <label class="switch"><span>{{ form.email_digest.label }}<br><span class="small muted">One email a day with what you missed, only for the types switched on under Email.</span></span>{{ form.email_digest }}</label>
+      <div class="field"><label for="{{ form.push_privacy.id_for_label }}">{{ form.push_privacy.label }}</label>{{ form.push_privacy }}<p class="small muted">Choose "Only say there is something new" if others can see your lock screen.</p></div>
+    </section>
+    <div class="actions"><button class="btn primary">Save</button></div>
+  </form>
+</div>
+{% endblock %}
