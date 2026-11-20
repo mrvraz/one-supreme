@@ -63,7 +63,7 @@ class Command(BaseCommand):
         self.stdout.write(f"Checked {len(sso_accounts)} accounts; {len(leavers)} no longer in the directory.")
 
     def fail(self, message):
-        """Tell the admins by email (ADMIN_EMAILS): a silent failure would leave leavers listed for weeks."""
+        """Log it and, unless --no-email, tell the admins (ADMIN_EMAILS): a silent failure would leave leavers in."""
         audit("directory_sync_failed", level=logging.ERROR, error=message)
         if self.email_on_failure:
             mail_admins("Staff hub: leaver check failed", message)
