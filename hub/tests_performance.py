@@ -79,7 +79,7 @@ class QueryCeilingTests(TestCase):
         }
         # With some room. A page that needs more than this is doing something new and should be looked at.
         ceilings = {
-            "feed": 44, "feed by activity": 44, "group": 50, "profile": 31, "news": 14, "unread news": 14, "chat list": 12,
+            "feed": 44, "feed by activity": 44, "group": 52, "profile": 31, "news": 14, "unread news": 14, "chat list": 12,
             "moderator's feed": 42, "admin posts": 12, "admin reports": 11, "admin events": 12,
         }
         self.add(2)

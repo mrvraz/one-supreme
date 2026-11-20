@@ -182,12 +182,9 @@ def post_queryset(live=True, threads=CARD_THREADS):
     Only the newest `threads` comment threads come with each post (None: all of them): a busy announcement has hundreds.
     """
     posts = Post.objects.visible() if live else Post.objects.filter(is_hidden=False, deleted_at__isnull=True)
-    visible = Comment.objects.visible()
-    comments = visible.select_related("author").prefetch_related("reactions", "mentions")
+    comments = Comment.objects.visible().select_related("author").prefetch_related("reactions", "mentions")
     newest = comments.filter(parent=None).prefetch_related(Prefetch("replies", queryset=comments)).order_by("-created_at")
-    return posts.select_related("author", "community", "event").counting(
-        comment_count=visible, thread_count=visible.filter(parent=None)
-    ).prefetch_related(
+    return posts.select_related("author", "community", "event").prefetch_related(
         "attachments", "audiences", "mentions", "options",
         Prefetch("comments", queryset=newest if threads is None else newest[:threads], to_attr="threads"),
     )
@@ -236,6 +233,9 @@ def decorate(posts, user):
     for post_id, kind, n in Reaction.objects.filter(post__in=posts).values_list("post_id", "kind").annotate(n=Count("pk")).order_by("kind"):
         reaction_counts[post_id][kind] = n
     my_reactions = dict(Reaction.objects.filter(post__in=posts, user=user).values_list("post_id", "kind"))
+    per_post = Comment.objects.visible().filter(post__in=posts).values_list("post_id").order_by()
+    per_post = per_post.annotate(n=Count("pk"), threads=Count("pk", filter=Q(parent=None)))
+    comment_counts = {post_id: (n, threads) for post_id, n, threads in per_post}
 
     for post in posts:
         post.my_reaction = my_reactions.get(post.pk)
@@ -249,7 +249,8 @@ def decorate(posts, user):
                 comment_reactions = list(shown.reactions.all())
                 shown.my_reaction = _my_reaction(comment_reactions, user)
                 shown.reaction_total = len(comment_reactions)
-        post.comment_total, post.earlier_threads = post.comment_count, post.thread_count - len(post.comment_list)
+        post.comment_total, threads = comment_counts.get(post.pk, (0, 0))
+        post.earlier_threads = threads - len(post.comment_list)
 
         post.user_can_pin = moderator or post.community_id in managed
         post.is_followed = post.pk in following
