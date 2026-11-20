@@ -171,7 +171,7 @@ def log_refusals(get_response):
     """Every refused request (403: no permission, or no valid form token) goes to the security log, with who and where.
 
     Last in settings.MIDDLEWARE, so it sees what the views and the form-token check refuse, but not what middleware
-    higher up refuses and logs itself.
+    higher up refuses and logs itself, nor the single sign-on refresh's 403 to page scripts.
     """
 
     def middleware(request):

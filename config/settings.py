@@ -82,7 +82,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "hub.security.house_rules",
     "hub.security.presence",
-    "hub.security.log_refusals",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -159,6 +158,8 @@ if OIDC_ENABLED:
     OIDC_OP_LOGOUT_URL_METHOD = "hub.auth.provider_logout_url"
 if ALLOW_PASSWORD_LOGIN or not OIDC_ENABLED:
     AUTHENTICATION_BACKENDS.append("django.contrib.auth.backends.ModelBackend")
+# Last, after SessionRefresh: its 403 only asks a page script (chat, suggestions) to renew the sign-in.
+MIDDLEWARE.append("hub.security.log_refusals")
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "feed"

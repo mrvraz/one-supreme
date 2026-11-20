@@ -113,14 +113,17 @@ class BaselineTests(TestCase):
             script = (
                 "import django, json; django.setup(); from django.conf import settings as s; print(json.dumps("
                 "[s.SESSION_COOKIE_NAME, s.SESSION_COOKIE_SECURE, s.SESSION_COOKIE_DOMAIN, s.SESSION_COOKIE_PATH, "
-                "s.OIDC_OP_LOGOUT_URL_METHOD]))"
+                "s.OIDC_OP_LOGOUT_URL_METHOD, s.MIDDLEWARE[-2:]]))"
             )
             result = subprocess.run(
                 [sys.executable, "-c", script], cwd=settings.BASE_DIR, env={**os.environ, **production},
                 capture_output=True, text=True, timeout=120,
             )
         self.assertEqual(result.returncode, 0, result.stderr)
-        # __Host- only works with Secure, no Domain and Path=/, which these are.
+        # __Host- only works with Secure, no Domain and Path=/, which these are. Refusals are logged inside the
+        # single sign-on refresh, whose 403 to the chat's polling only asks it to renew the sign-in.
+        refresh = "mozilla_django_oidc.middleware.SessionRefresh"
         self.assertEqual(
-            json.loads(result.stdout.splitlines()[-1]), ["__Host-sessionid", True, None, "/", "hub.auth.provider_logout_url"]
+            json.loads(result.stdout.splitlines()[-1]),
+            ["__Host-sessionid", True, None, "/", "hub.auth.provider_logout_url", [refresh, "hub.security.log_refusals"]],
         )

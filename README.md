@@ -169,6 +169,10 @@ docker run --rm -v staff-hub_media:/data -v "$PWD":/backup alpine tar czf /backu
 
 ## Security notes
 
+- What we protect, from whom and how: `docs/security/THREAT-MODEL.md`. The security baseline is OWASP ASVS 4.0.3
+  Level 2; `docs/security/ASVS-L2.md` marks every requirement met, not met or not applicable, with its proof.
+- Sign out also signs that browser out of Microsoft, and signed-in pages are never kept by the browser, so on a
+  shared device the next person can't go Back or sign straight in as the last one.
 - Every page requires sign-in (Django's `LoginRequiredMiddleware`); only the sign-in page, the SSO callback, the home-screen icon/manifest and the push service worker are public.
 - A Content Security Policy only allows scripts from the hub itself and forbids framing; the browser also gets no access to camera, microphone or location.
 - Uploaded files are served by nginx only after the app has checked the session and that the person may see them (`X-Accel-Redirect`); the files folder is not public.
