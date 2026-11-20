@@ -1,0 +1,76 @@
+{
+  "team": "identity",
+  "branch": "team/identity",
+  "next_round": 3,
+  "next_step": "review",
+  "required_fixes_from_last_judge": [
+    {
+      "what": "Allow Microsoft's sign-in host in the CSP form-action. In hub/security.py, change \"form-action 'self'\" to \"form-action 'self' https://login.microsoftonline.com\". Add a test that the form-action of a hub page's Content-Security-Policy allows the host that sign_out_url sends SSO sessions to. Leave the IDENTITY.md 'Signing out' text as it is only once that holds.",
+      "why": "C1 (blocker, upheld and reproduced in headless Edge). Sign out is a form POST, and Chromium checks form-action on every redirect of a form submission. So the 302 to login.microsoftonline.com/.../logout is blocked: the person gets a blocked page and Microsoft's session survives. On main, sign-out ended cleanly at /login/. The round-1 S1 fix doesn't work in Edge or Chrome, and IDENTITY.md lines 79-84 and the sign-off row say it does. No other branch changes form-action.",
+      "where": "hub/security.py:120; hub/tests_identity.py SignOutTests; docs/security/IDENTITY.md lines 79-84"
+    },
+    {
+      "what": "The same CSP change also lets the 15-minute re-check run after a form send. Add a test, or one assertion, that the authorize host SessionRefresh redirects to is allowed by form-action. Correct IDENTITY.md lines 64-69 if anything still differs.",
+      "why": "C2 (major, upheld; it was already on main, but this team owns the re-check and its doc). Once the re-check is due, any plain form POST redirects to a GET, which SessionRefresh sends on to Microsoft inside the form-submission redirect chain. Chromium blocks that, so the person sees a blocked page after saving. IDENTITY.md says the check runs 'on the next page the person opens ... with no prompt'.",
+      "where": "hub/security.py:120 (same edit as above); docs/security/IDENTITY.md lines 64-69"
+    },
+    {
+      "what": "Make the start-up check catch every Microsoft host. Use re.search(r\"microsoft|windows\\.net\", OIDC_OP_TOKEN_ENDPOINT, re.I), so login.microsoft.com and sts.windows.net also have to match the strict login.microsoftonline.com/<GUID>/oauth2/v2.0/token form. Add f\"https://login.microsoft.com/{TENANT}/oauth2/v2.0/token\" and f\"https://sts.windows.net/{TENANT}/oauth2/v2.0/token\" to the 'wrong' list in test_production_settings_turn_on_every_check.",
+      "why": "C3/S2 (major, upheld and reproduced). login.microsoft.com is an Entra alias that gets past the check. With it, the tenant check is off (issuer=None) and another tenant's token signs in. The leaver check also prints 'Skipped' and exits 0 with no alert, and sign-out stays out of Microsoft. IDENTITY.md lines 21-24 claim the hub won't start unless the address is exactly login.microsoftonline.com.",
+      "where": "config/settings.py:150; hub/tests_identity.py:160-168; docs/security/IDENTITY.md lines 21-24"
+    },
+    {
+      "what": "Send the admin site's Log out through the same sign-out. Add path(\"admin/logout/\", oidc_views.OIDCLogoutView.as_view()) before path(\"admin/\", admin.site.urls), next to the existing admin/login/ override. Add a test that POST /admin/logout/ for an SSO admin redirects to .../oauth2/v2.0/logout and deletes the session. Mention the admin's Log out in IDENTITY.md 'Signing out'.",
+      "why": "C4/S4 (major, upheld and reproduced). POST /admin/logout/ is still Django's admin LogoutView and goes to /login/. The shared-computer protection the branch adds is missing for staff and superusers, whose Microsoft session has already passed MFA. It needs the CSP fix above to work in a browser.",
+      "where": "config/urls.py (before admin.site.urls); hub/tests_identity.py SignOutTests; docs/security/IDENTITY.md 'Signing out'"
+    },
+    {
+      "what": "Check where the browser goes after a sign-in or re-check. Override success_url in CallbackView so that it returns session['oidc_login_next'] only when url_has_allowed_host_and_scheme(next, {request.get_host()}, require_https=request.is_secure()) passes. Otherwise it returns resolve_url(LOGIN_REDIRECT_URL); hub/views.py safe_redirect already does this. Add a test with the re-check due and PATH_INFO='//evil.example/x' (and '/\\\\evil.example/x') that the callback lands on the hub.",
+      "why": "S1 (major, upheld and reproduced). SessionRefresh saves request.get_full_path() unchecked, and the callback redirects to it. A link like https://hub.supreme.co.uk//evil.example/fake-sign-in takes a signed-in person whose re-check is due through Microsoft and on to the attacker's site: an open redirect from the hub's domain, right after a Microsoft hop. That is ideal for phishing. It was already on main, but CallbackView is now this team's code, and the mission is to fix what isn't safe in sign-in. redteam's open-redirect tests don't cover this path.",
+      "where": "hub/auth.py CallbackView; hub/tests_identity.py"
+    },
+    {
+      "what": "Minor, not blocking: list in the report's open items that team/handover's GO-LIVE item 28 must use a well-formed tenant GUID that doesn't exist (e.g. 00000000-0000-0000-0000-000000000000) instead of no-such-tenant.",
+      "why": "C5 (upheld as minor; it is a merge note, and the strict check itself is right). With this branch merged, the item-28 command raises ImproperlyConfigured before sync_directory runs, so no alert email is sent and the item cannot pass.",
+      "where": "builder's report open_items (team/handover docs/operations/GO-LIVE.md:65-70)"
+    },
+    {
+      "what": "Minor, not blocking: correct the merge notes. team/compliance also conflicts in README.md. Handover's ENTRA-SETUP, INSTALL, RELEASE-NOTES and RUNBOOK (lines 61, 261, 317) still say the leaver check runs nightly at 05:00, and RUNBOOK:317 says a failure only leaves the list of people out of date.",
+      "why": "C8 (upheld as minor). The orchestrator's merge plan and handover's docs would contradict IDENTITY.md's 15-minute promise.",
+      "where": "builder's report open_items"
+    },
+    {
+      "what": "Minor, not blocking: reword IDENTITY.md lines 81-82. The next person has to sign in as themselves only once the person signing out has picked their account on Microsoft's sign-out page. Or pass logout_hint, which needs the login_hint optional claim set up in ENTRA-SETUP.",
+      "why": "S7 (upheld as minor). Without logout_hint, Microsoft shows an account picker. If the person walks away from it, Microsoft's session stays.",
+      "where": "docs/security/IDENTITY.md lines 79-84"
+    },
+    {
+      "what": "Minor, may stay open: wrap the logout views in login_not_required.",
+      "why": "C7 (upheld as minor; it was already on main). Signing out from a tab whose session has ended goes to /login/?next=/logout/. After the next sign-in, that ends on a 405 from GET /logout/.",
+      "where": "hub/urls.py:10; config/urls.py oidc/logout/"
+    },
+    {
+      "what": "Minor, may stay open: give stray callbacks (no sign-in started with this state) their own event name, or log them at INFO, and keep sign_in_rejected for refusals of a sign-in the browser really started.",
+      "why": "S6 (upheld as minor). Anyone can write sign_in_rejected WARNING lines with one anonymous GET. The SIEM's burst rule (handover RUNBOOK, more than 10 in 10 minutes) can then be set off on purpose, hiding real refusals.",
+      "where": "hub/auth.py CallbackView.get, unknown-state branch"
+    },
+    {
+      "what": "Minor, may stay open: avoid decoding every live session on switch-off. For example, rotate the session auth hash, or store the user on each session.",
+      "why": "S5 (upheld as minor). Anonymous /oidc/authenticate/ requests create Session rows that last 12 hours. At about 68 µs a row, a flood of them makes each switch-off slow inside the single scheduler loop. The code already marks this as a shortcut.",
+      "where": "hub/models.py User.save"
+    }
+  ],
+  "last_judge_summary": "The identity team's round 2 is not done. All 179 tests pass, but four major gaps stand, and I reproduced each one myself. Each is a small fix.\n\n1. **C1 and C2 (sign-out and the re-check break in Edge and Chrome).** The hub's CSP says form-action 'self', and Chromium checks that on every redirect after a form is sent. So Sign out's POST, then its 302 to Microsoft's logout, is blocked: the person gets an error page, and Microsoft's session stays. On main, sign-out ended cleanly at /login/. The same block hits the 15-minute re-check after any form is saved. I confirmed it in headless Edge, and adding https://login.microsoftonline.com to form-action in hub/security.py makes the redirect go through.\n2. **C3/S2 (start-up check has a hole).** The token-address check misses the login.microsoft.com alias. With that address, the tenant check is off and another tenant's token signs in. The leaver check is also skipped silently, and sign-out stays in the hub. Fix: match 'microsoft' in the check.\n3. **C4/S4 (admin Log out).** /admin/logout/ still uses Django's own view and never sends anyone to Microsoft's sign-out. Fix: route it to OIDCLogoutView.\n4. **S1 (open redirect).** After the 15-minute re-check, the callback redirects to the path SessionRefresh saved, without checking it. So https://hub.supreme.co.uk//evil.example/... sends a signed-in person on to evil.example. Fix: override CallbackView.success_url with url_has_allowed_host_and_scheme, as hub/views.py safe_redirect already does.\n\n**Minor items that can stay open:**\n- C5: handover's GO-LIVE item 28 needs a well-formed GUID for its made-up tenant (an open item for handover).\n- C8: team/compliance also conflicts in README.md, and handover's docs still say the leaver check runs nightly.\n- S7: the IDENTITY.md sign-out wording should mention Microsoft's account picker.\n- C7: signing out from a tab whose session has ended ends on a 405 after the next sign-in.\n- S6: anonymous stray callbacks write sign_in_rejected lines, which can set off the SIEM's burst alert.\n- S5: switching an account off decodes every live session.\n\n**Rejected:** C6 and S3. Every 15-minute failure is logged at ERROR, and the SIEM alerts on that per handover's RUNBOOK. The 05:00 email is an extra.\n\n**Done-when items that are met:** every listed behaviour has a passing test (state, nonce, PKCE, other tenant, email domain, switched-off account, first sign-in, sso_id match, new session id, leavers, re-hire, sync alert, server-side sign-out, idle and absolute limits, password sign-in off). Break-glass is limited to password sign-in, and MFA rests on Conditional Access (assumed signed off).\n\n**Not met:** gaps found are not all fixed, and IDENTITY.md lines 21-24, 64-69 and 79-84 don't match real behaviour.\n\nNot checked: Firefox and Safari, and Microsoft's real logout behaviour.",
+  "last_build": {
+    "summary": "Round 3 (identity) fixes every required item from the judge (C1, C2, C3, C4, S1) and three of the minor ones (C7, S6, S7). Files changed: hub/security.py, config/settings.py, config/urls.py, hub/urls.py, hub/auth.py, hub/tests_identity.py, docs/security/IDENTITY.md. The full suite passes: 181 tests, OK. team/identity now points at 1b9226f and the working copy is removed. Incident during the work: the git stash list is shared by every worktree. I ran git stash push and then pop; another team pushed a stash in between, so my pop applied team/redteam's stash (based on 31de511) to my worktree. I reset those four foreign files (chat/hooks.py, chat/views.py, hub/admin.py, hub/media.py) to HEAD in my worktree only, re-applied my own stash by its hash, and dropped only my own entry, checked by hash (42c4026b). The other teams' stash entries were not touched; cd7eafc5 was still listed afterwards. Teams should stop using git stash in this repo.",
+    "open_items": [
+      "S5 (minor, may stay open): User.save still decodes every live session when an account is switched off. It is already marked as a shortcut in hub/models.py.",
+      "C5 merge note for team/handover: docs/operations/GO-LIVE.md item 28 must use a well-formed tenant GUID that doesn't exist, e.g. https://login.microsoftonline.com/00000000-0000-0000-0000-000000000000/oauth2/v2.0/token, not 'no-such-tenant'. With this branch merged, the current command raises ImproperlyConfigured before sync_directory runs, so no alert email is sent.",
+      "C8 merge notes: team/compliance also conflicts with this branch in README.md. Handover's ENTRA-SETUP, INSTALL, RELEASE-NOTES and RUNBOOK (lines 61, 261, 317) still say the leaver check runs nightly at 05:00, and RUNBOOK:317 says a failure only leaves the people list out of date. They must say every 15 minutes (05:00 is only the run that emails) to match IDENTITY.md.",
+      "New merge note: handover RUNBOOK's sign_in_rejected row and the SIEM burst rule should add the new INFO event 'sign_in_ignored' (stray callbacks, no alert).",
+      "Merge note: team/hardening's admin_network middleware will also apply to /admin/logout/. An admin outside ADMIN_ALLOWED_RANGES gets 403 there, but such an admin can't reach the admin pages anyway. The main Sign out at /logout/ is unaffected.",
+      "Not checked in a real browser: I was not allowed to use the browser pane. The form-action fix relies on the judge's headless Edge repro. Firefox, Safari and Microsoft's real logout and account-list behaviour were not checked.",
+      "Process risk: other teams are using git stash in this shared repo, and the stash list is shared across all worktrees. At least one entry from another team (cd7eafc5, team/redteam, base 31de511) was still in the list when I finished; one more (a88d678, base 2ce80b4) was there earlier. Ask the teams to use patches or WIP commits instead of stash."
+    ]
+  }
+}
