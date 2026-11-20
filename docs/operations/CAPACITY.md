@@ -118,8 +118,8 @@ Each fix has a test in `hub/tests_performance.py`:
   `if`s in `hub/templates/hub/_icon.html`. If these pages ever need to be faster, make the reaction picker one form and the icon
   a lookup.
 - **The group page decorates its pinned posts and its other posts separately**, about 10 small queries more than
-  needed, because the QA team changed the same lines. The feed does both in one go (`shown_cards`); the group page
-  can do the same once both changes are in.
+  needed, because the QA team changed the same lines. The feed does both in one `decorate` call; the group
+  page can do the same once both changes are in.
 
 ## Server settings for 500 staff
 

@@ -225,25 +225,25 @@ class Command(BaseCommand):
         # The benchmark user has a draft and two posts waiting to go out.
         rows += [Post(author=self.user, body=text(rnd, 8, 20), is_draft=True),
                  *(Post(author=self.user, body=text(rnd, 8, 20), created_at=now + timedelta(days=d)) for d in (1, 3))]
-        self.posts = self.bulk(Post, rows)
-        self.live = [p for p in self.posts if p.is_live]
+        made = self.bulk(Post, rows)
+        self.live = [p for p in made if p.is_live]
 
-        news = [p for p in self.posts if p.kind == Post.NEWS]
+        news = [p for p in made if p.kind == Post.NEWS]
         Audience = Post.audiences.through
         self.bulk(Audience, [Audience(post_id=p.pk, community_id=c.pk)
                              for p in news if rnd.random() < 0.3 for c in rnd.sample(self.units, rnd.randint(1, 2))])
         mentions = []
         names = {u.get_full_name(): u for u in users}
-        for post in self.posts:
+        for post in made:
             if "@" in post.body:
                 mentions.append(Post.mentions.through(post_id=post.pk, user_id=names[post.body.split("@")[1][:-1]].pk))
         self.bulk(Post.mentions.through, mentions)
         self.bulk(Attachment, [
             Attachment(post=p, file=f"posts/{p.created_at:%Y/%m}/load-{p.pk}-{n}.jpg", kind=Attachment.IMAGE)
-            for p in self.posts if p.kind == Post.UPDATE and rnd.random() < 0.15 for n in range(rnd.randint(1, 4))
+            for p in made if p.kind == Post.UPDATE and rnd.random() < 0.15 for n in range(rnd.randint(1, 4))
         ])
 
-        polls = [p for p in self.posts if p.kind == Post.POLL]
+        polls = [p for p in made if p.kind == Post.POLL]
         options = self.bulk(PollOption, [PollOption(post=p, text=text(rnd, 1, 4)[:-1], position=n)
                                          for p in polls for n in range(rnd.randint(2, 5))])
         by_poll = {}
@@ -257,9 +257,9 @@ class Command(BaseCommand):
             for p in news if p.is_live for u in rnd.sample(users, round(len(users) * rnd.uniform(0.4, 0.8)))
         ])
         rsvps = [RSVP(event_id=p.event_id, user=u, status=rnd.choice(RSVP.Status.values))
-                 for p in self.posts if p.event_id for u in rnd.sample(users, min(len(users), rnd.randint(5, 60)))]
+                 for p in made if p.event_id for u in rnd.sample(users, min(len(users), rnd.randint(5, 60)))]
         self.bulk(RSVP, rsvps)
-        follows = {(rnd.choice(self.live).pk, rnd.choice(users).pk) for _ in range(len(self.posts) // 7)}
+        follows = {(rnd.choice(self.live).pk, rnd.choice(users).pk) for _ in range(len(made) // 7)}
         self.bulk(PostFollow, [PostFollow(post_id=p, user_id=u) for p, u in follows])
         self.bulk(FeatureNote, [FeatureNote(title=text(rnd, 2, 4)[:-1], body=text(rnd, 15, 30),
                                             published_at=now - timedelta(days=30 * n)) for n in range(6)])

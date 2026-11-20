@@ -229,8 +229,9 @@ def decorate(posts, user):
     tallies = Counter(PollVote.objects.filter(post__in=polls).values_list("option_id", flat=True)) if polls else {}
     my_votes = dict(PollVote.objects.filter(post__in=polls, user=user).values_list("post_id", "option_id")) if polls else {}
     # Totals per post and kind from the database: a popular post has a reaction from nearly everyone.
+    by_kind = Reaction.objects.filter(post__in=posts).values_list("post_id", "kind").annotate(n=Count("pk")).order_by("kind")
     reaction_counts = defaultdict(Counter)
-    for post_id, kind, n in Reaction.objects.filter(post__in=posts).values_list("post_id", "kind").annotate(n=Count("pk")).order_by("kind"):
+    for post_id, kind, n in by_kind:
         reaction_counts[post_id][kind] = n
     my_reactions = dict(Reaction.objects.filter(post__in=posts, user=user).values_list("post_id", "kind"))
     per_post = Comment.objects.visible().filter(post__in=posts).values_list("post_id").order_by()
@@ -275,13 +276,6 @@ def as_id(value):
 
 def paginate(request, queryset, per_page=20):
     return Paginator(queryset, per_page).get_page(request.GET.get("page"))
-
-
-def shown_cards(pinned, page, user):
-    """(pinned, the page's posts), decorated in one go. Pinned posts only show on the first page."""
-    pinned = pinned if page.number == 1 else []
-    cards = decorate([*pinned, *page.object_list], user)
-    return cards[:len(pinned)], cards[len(pinned):]
 
 
 def safe_redirect(request, url, default):
@@ -380,14 +374,15 @@ def feed(request):
     pins = posts.filter(pinned_at__isnull=False).exclude(community__kind=Community.GROUP)
     pinned = list(pins.order_by("-pinned_at")[:5])
     page = paginate(request, posts.exclude(pk__in=[p.pk for p in pinned]).order_by(SORTS[sort][1], "-pk"))
-    pinned, cards = shown_cards(pinned, page, user)
+    pinned = pinned if page.number == 1 else []
+    cards = decorate([*pinned, *page.object_list], user)  # in one go: each call costs a dozen queries
     now = timezone.now()
     context = {
         "nav": "feed",
         "form": form,
-        "pinned": pinned,
+        "pinned": cards[:len(pinned)],
         "page": page,
-        "posts": cards,
+        "posts": cards[len(pinned):],
         "sort": sort, "sorts": SORTS, "scope": scope, "scopes": SCOPES, "kind": kind, "kinds": FEED_KINDS,
         "upcoming": visible_events(user).filter(Q(starts_at__gte=now) | Q(ends_at__gte=now))[:4],
         "my_groups": user.communities.all()[:8],
