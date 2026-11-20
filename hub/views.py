@@ -172,20 +172,37 @@ def media(request, path):
 # --- Helpers ---------------------------------------------------------------------
 
 
-def post_queryset(live=True):
-    """Posts with everything a post card shows. live=False also includes drafts and scheduled posts."""
+# Comment threads loaded per post: a card in a list shows two (the third tells it there are more), the post's own page 50.
+CARD_THREADS, PAGE_THREADS = 3, 50
+
+
+def post_queryset(live=True, threads=CARD_THREADS):
+    """Posts with everything a post card shows. live=False also includes drafts and scheduled posts.
+
+    Only the newest `threads` comment threads come with each post (None: all of them): a busy announcement has hundreds.
+    """
     posts = Post.objects.visible() if live else Post.objects.filter(is_hidden=False, deleted_at__isnull=True)
-    comments = Comment.objects.visible().select_related("author").prefetch_related("reactions", "mentions")
-    return posts.select_related("author", "community", "event").prefetch_related(
-        "attachments", "reactions", "audiences", "mentions", "options", Prefetch("comments", queryset=comments)
+    visible = Comment.objects.visible()
+    comments = visible.select_related("author").prefetch_related("reactions", "mentions")
+    newest = comments.filter(parent=None).prefetch_related(Prefetch("replies", queryset=comments)).order_by("-created_at")
+    return posts.select_related("author", "community", "event").counting(
+        comment_count=visible, thread_count=visible.filter(parent=None)
+    ).prefetch_related(
+        "attachments", "audiences", "mentions", "options",
+        Prefetch("comments", queryset=newest if threads is None else newest[:threads], to_attr="threads"),
     )
 
 
-def get_post(request, pk):
+def page_threads(url):
+    """How many threads the post's own page shows at this address: the newest PAGE_THREADS, or all once asked."""
+    return None if "comments=all" in url else PAGE_THREADS
+
+
+def get_post(request, pk, threads=CARD_THREADS):
     """A post the person may open, including their own drafts and scheduled posts. 404 otherwise."""
-    post = post_queryset().viewable_by(request.user).filter(pk=pk).first()
+    post = post_queryset(threads=threads).viewable_by(request.user).filter(pk=pk).first()
     if post is None:
-        post = post_queryset(live=False).filter(pk=pk, author=request.user).first()
+        post = post_queryset(live=False, threads=threads).filter(pk=pk, author=request.user).first()
     if post is None:
         raise Http404
     return post
@@ -214,25 +231,25 @@ def decorate(posts, user):
     polls = [p for p in posts if p.kind == Post.POLL]
     tallies = Counter(PollVote.objects.filter(post__in=polls).values_list("option_id", flat=True)) if polls else {}
     my_votes = dict(PollVote.objects.filter(post__in=polls, user=user).values_list("post_id", "option_id")) if polls else {}
+    # Totals per post and kind from the database: a popular post has a reaction from nearly everyone.
+    reaction_counts = defaultdict(Counter)
+    for post_id, kind, n in Reaction.objects.filter(post__in=posts).values_list("post_id", "kind").annotate(n=Count("pk")).order_by("kind"):
+        reaction_counts[post_id][kind] = n
+    my_reactions = dict(Reaction.objects.filter(post__in=posts, user=user).values_list("post_id", "kind"))
 
     for post in posts:
-        reactions = list(post.reactions.all())
-        post.my_reaction = _my_reaction(reactions, user)
-        post.reaction_total = len(reactions)
-        post.reaction_emojis = "".join(Reaction.EMOJI[kind] for kind, _n in Counter(r.kind for r in reactions).most_common(3))
+        post.my_reaction = my_reactions.get(post.pk)
+        post.reaction_total = sum(reaction_counts[post.pk].values())
+        post.reaction_emojis = "".join(Reaction.EMOJI[kind] for kind, _n in reaction_counts[post.pk].most_common(3))
 
-        comments = list(post.comments.all())
-        replies = defaultdict(list)
-        for comment in comments:
-            comment_reactions = list(comment.reactions.all())
-            comment.my_reaction = _my_reaction(comment_reactions, user)
-            comment.reaction_total = len(comment_reactions)
-            if comment.parent_id:
-                replies[comment.parent_id].append(comment)
-        post.comment_list = [c for c in comments if c.parent_id is None]
+        post.comment_list = sorted(post.threads, key=lambda c: (c.created_at, c.pk))  # oldest first
         for comment in post.comment_list:
-            comment.reply_list = replies[comment.pk]
-        post.comment_total = len(comments)
+            comment.reply_list = list(comment.replies.all())
+            for shown in (comment, *comment.reply_list):
+                comment_reactions = list(shown.reactions.all())
+                shown.my_reaction = _my_reaction(comment_reactions, user)
+                shown.reaction_total = len(comment_reactions)
+        post.comment_total, post.earlier_threads = post.comment_count, post.thread_count - len(post.comment_list)
 
         post.user_can_pin = moderator or post.community_id in managed
         post.is_followed = post.pk in following
@@ -259,6 +276,13 @@ def paginate(request, queryset, per_page=20):
     return Paginator(queryset, per_page).get_page(request.GET.get("page"))
 
 
+def shown_cards(pinned, page, user):
+    """(pinned, the page's posts), decorated in one go. Pinned posts only show on the first page."""
+    pinned = pinned if page.number == 1 else []
+    cards = decorate([*pinned, *page.object_list], user)
+    return cards[:len(pinned)], cards[len(pinned):]
+
+
 def safe_redirect(request, url, default):
     """Redirect to url if it stays on this site, otherwise to default."""
     if not url_has_allowed_host_and_scheme(url, {request.get_host()}, require_https=request.is_secure()):
@@ -269,8 +293,10 @@ def safe_redirect(request, url, default):
 def post_changed(request, post_pk):
     """After a reaction, vote or comment: return the refreshed post card to the page script, or reload the page."""
     if request.headers.get("X-Fragment"):
-        post = get_post(request, post_pk)
-        context = {"post": decorate([post], request.user)[0], "full": request.POST.get("full") == "1"}
+        full = request.POST.get("full") == "1"
+        # On the post's own page, the card comes back with the threads that page was showing.
+        threads = page_threads(request.META.get("HTTP_REFERER", "")) if full else CARD_THREADS
+        context = {"post": decorate([get_post(request, post_pk, threads)], request.user)[0], "full": full}
         return render(request, "hub/_post.html", context)
     anchor = f"#post-{post_pk}"
     back = request.META.get("HTTP_REFERER", "").split("#")[0]
@@ -341,7 +367,7 @@ def feed(request):
     kind = request.GET.get("type") if request.GET.get("type") in dict(Post.KINDS) else ""
 
     posts = post_queryset().in_feed_of(user)
-    company_wide = Q(community__isnull=True, audiences__isnull=True)
+    company_wide = Post.for_everyone()
     if scope == "company":
         posts = posts.filter(company_wide)
     elif scope == "mine":
@@ -351,15 +377,16 @@ def feed(request):
     # Company and team pins go on top of the home feed. Interest groups' pins (anyone can start a group) stay on
     # top of their group's page, so five of them can't push "Office closed on Monday" out of sight.
     pins = posts.filter(pinned_at__isnull=False).exclude(community__kind=Community.GROUP)
-    pinned = decorate(pins.order_by("-pinned_at")[:5], user)
+    pinned = list(pins.order_by("-pinned_at")[:5])
     page = paginate(request, posts.exclude(pk__in=[p.pk for p in pinned]).order_by(SORTS[sort][1], "-pk"))
+    pinned, cards = shown_cards(pinned, page, user)
     now = timezone.now()
     context = {
         "nav": "feed",
         "form": form,
-        "pinned": pinned if page.number == 1 else [],
+        "pinned": pinned,
         "page": page,
-        "posts": decorate(page.object_list, user),
+        "posts": cards,
         "sort": sort, "sorts": SORTS, "scope": scope, "scopes": SCOPES, "kind": kind, "kinds": FEED_KINDS,
         "upcoming": visible_events(user).filter(Q(starts_at__gte=now) | Q(ends_at__gte=now))[:4],
         "my_groups": user.communities.all()[:8],
@@ -369,7 +396,7 @@ def feed(request):
 
 
 def post_detail(request, pk):
-    post = get_post(request, pk)
+    post = get_post(request, pk, page_threads(request.get_full_path()))
     user = request.user
     if post.kind == Post.NEWS and post.is_live:
         PostRead.objects.get_or_create(post=post, user=user)
@@ -806,14 +833,15 @@ def community_detail(request, slug):
     elif request.method == "POST":
         raise PermissionDenied
     posts = post_queryset().filter(community=group)
-    pinned = decorate(posts.filter(pinned_at__isnull=False).order_by("-pinned_at")[:5], user)
+    pinned = list(posts.filter(pinned_at__isnull=False).order_by("-pinned_at")[:5])
     page = paginate(request, posts.exclude(pk__in=[p.pk for p in pinned]))
+    pinned, cards = shown_cards(pinned, page, user)
     now = timezone.now()
     context = base | {
         "form": form,
-        "pinned": pinned if page.number == 1 else [],
+        "pinned": pinned,
         "page": page,
-        "posts": decorate(page.object_list, user),
+        "posts": cards,
         "events": group.events.filter(Q(starts_at__gte=now) | Q(ends_at__gte=now))[:5],
         "members": group.members.all()[:12],
     }

@@ -87,6 +87,7 @@ class AttachmentInline(admin.TabularInline):
 @admin.register(Post)
 class PostAdmin(ModeratedAdmin):
     list_display = ("__str__", "kind", "author", "community", "pinned_at", "is_hidden", "deleted_at", "created_at")
+    list_select_related = ("author", "community")  # the admin only joins required links by itself, so name them
     list_filter = ModeratedAdmin.list_filter + ("kind", "is_announcement", "community")
     search_fields = ("body", "author__email", "author__first_name", "author__last_name")
     raw_id_fields = ("author",)
@@ -103,6 +104,7 @@ class CommentAdmin(ModeratedAdmin):
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
     list_display = ("__str__", "content", "reason", "reporter", "created_at", "resolved_at")
+    list_select_related = ("reporter", "post", "comment", "person")
     list_filter = (("resolved_at", admin.EmptyFieldListFilter),)
     readonly_fields = ("reporter", "post", "comment", "person", "reason", "created_at", "resolved_at", "resolved_by", "content")
     actions = ["hide_and_resolve", "resolve"]
@@ -177,6 +179,7 @@ class RSVPInline(admin.TabularInline):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     list_display = ("title", "starts_at", "community", "created_by")
+    list_select_related = ("community", "created_by")
     list_filter = ("community",)
     search_fields = ("title", "location")
     raw_id_fields = ("created_by",)

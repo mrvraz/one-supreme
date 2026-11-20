@@ -2,7 +2,8 @@ from datetime import date, timedelta
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.db.models import Q
+from django.db.models import Count, Exists, OuterRef, Q, Subquery
+from django.db.models.functions import Coalesce
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from django.urls import reverse
@@ -269,11 +270,24 @@ class PostQuerySet(ModeratedQuerySet):
         return super().visible().filter(is_draft=False, created_at__lte=timezone.now())
 
     def _audience(self, user, open_groups):
+        # Subqueries, not joins: a join repeats each post once per audience, and the DISTINCT that undoes it
+        # makes every count and page of posts compare whole rows.
         mine = user.communities.all()
-        allowed = Q(community__isnull=True, audiences__isnull=True) | Q(community__in=mine) | Q(audiences__in=mine) | Q(author=user)
+        chosen = Post.audiences.through.objects.filter(post=OuterRef("pk"))
+        allowed = Post.for_everyone() | Q(community__in=mine) | Exists(chosen.filter(community__in=mine)) | Q(author=user)
         if open_groups:
             allowed |= Q(community__kind=Community.GROUP, community__is_private=False)
-        return self.filter(allowed).distinct()
+        return self.filter(allowed)
+
+    def counting(self, **counts):
+        """Add how many rows of each queryset belong to each post: counting(comment_count=Comment.objects.visible()).
+
+        Subqueries, so two counts don't multiply each other's rows the way two joined Count()s do.
+        """
+        def per_post(rows):
+            return Coalesce(Subquery(rows.filter(post=OuterRef("pk")).order_by().values("post").annotate(n=Count("pk")).values("n")), 0)
+
+        return self.annotate(**{name: per_post(rows) for name, rows in counts.items()})
 
     def in_feed_of(self, user):
         """What belongs in this person's feed: company-wide posts and posts for their groups and units."""
@@ -298,7 +312,7 @@ class Post(Moderated):
     # News can go to several groups and units at once. Empty (with no group above) means everyone.
     audiences = models.ManyToManyField(Community, blank=True, related_name="news")
     title = models.CharField(max_length=200, blank=True)
-    cover = models.ImageField(upload_to="covers/news/", blank=True)
+    cover = models.ImageField(upload_to="covers/news/", blank=True, db_index=True)  # looked up on every cover request
     body = models.TextField(max_length=20000, blank=True)
     mentions = models.ManyToManyField(User, blank=True, related_name="mentioned_in")
     is_announcement = models.BooleanField(default=False, help_text="Everyone is told about it")
@@ -321,6 +335,11 @@ class Post(Moderated):
 
     def __str__(self):
         return (self.title or self.body[:60] or f"Post {self.pk}").replace("\n", " ")
+
+    @staticmethod
+    def for_everyone():
+        """Q for posts to the whole company: no group and no chosen audiences."""
+        return Q(community__isnull=True) & ~Exists(Post.audiences.through.objects.filter(post=OuterRef("pk")))
 
     def get_absolute_url(self):
         return reverse("post_detail", args=[self.pk])
@@ -411,12 +430,14 @@ class Comment(Moderated):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comments")
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
     body = models.TextField(max_length=2000, blank=True)
-    image = models.ImageField(upload_to="comments/%Y/%m/", blank=True)
+    image = models.ImageField(upload_to="comments/%Y/%m/", blank=True, db_index=True)  # looked up on every picture request
     mentions = models.ManyToManyField(User, blank=True, related_name="mentioned_in_comments")
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         ordering = ["created_at"]
+        # A post card's newest threads. Without it SQLite reads every top-level comment through the parent index.
+        indexes = [models.Index(fields=["post", "parent", "created_at"])]
 
     def __str__(self):
         return self.body[:60] or "(picture)"

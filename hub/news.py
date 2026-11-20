@@ -6,7 +6,6 @@ Readers are tracked so people can filter "Unread", and so important items can as
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import default_storage
-from django.db.models import Count, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import NewsForm
-from .models import Post, PostRead, matching
+from .models import Comment, Post, PostRead, Reaction, matching
 from .publishing import announce, post_audience, set_mentions
 from .security import LIMIT_MESSAGE, audit, over_limit
 from .views import paginate
@@ -46,10 +45,9 @@ def news(request):
             items = items.exclude(reads__user=user).exclude(author=user)
     if q:
         items = matching(items, q, "title", "body")
-    visible_comment = Q(comments__is_hidden=False, comments__deleted_at__isnull=True)
     items = (
         items.select_related("author").prefetch_related("audiences")
-        .annotate(reaction_count=Count("reactions", distinct=True), comment_count=Count("comments", filter=visible_comment, distinct=True))
+        .counting(reaction_count=Reaction.objects.all(), comment_count=Comment.objects.visible())
         .order_by("-created_at")
     )
     page = paginate(request, items)

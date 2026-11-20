@@ -275,3 +275,9 @@ async function disablePush(button) {
   }
   pushStatus("Push notifications are off for this device.");
 }
+
+// ---------- A link to an older comment: the post's page shows the newest threads, so open them all ----------
+if (location.hash.startsWith("#comment-") && !document.getElementById(location.hash.slice(1))
+    && document.querySelector("a[href^='?comments=all']")) {
+  location.replace("?comments=all" + location.hash);
+}

@@ -109,6 +109,7 @@
 
   <div class="comments" id="comments">
     {% if not full and post.comment_list|length > 2 %}<a class="small muted" href="{{ post.get_absolute_url }}#comments">View all {{ post.comment_total }} comments</a>{% endif %}
+    {% if full and post.earlier_threads %}<a class="small muted" href="?comments=all#comments">View all {{ post.comment_total }} comments</a>{% endif %}
     {% if full %}{% for c in post.comment_list %}{% include "hub/_comment.html" %}{% endfor %}
     {% else %}{% for c in post.comment_list|slice:"-2:" %}{% include "hub/_comment.html" %}{% endfor %}{% endif %}
     <form class="comment-form" method="post" action="{% url 'comment_create' post.pk %}" enctype="multipart/form-data" data-swap="#post-{{ post.pk }}">
