@@ -106,7 +106,7 @@ the table says otherwise.
 | Entra certificate | `secrets/entra.pem` and the Entra app | A month before its end date (at least yearly) | Anyone with `sudo`, the `docker` group or user 1000 leaves; the file may have been copied |
 | Entra client secret | Should not exist: the hub uses the certificate | - | One is found in the app registration: delete it (ENTRA-SETUP.md) |
 | Break-glass password | IT's password manager | Every January, and after every use | Anyone who knew it leaves |
-| `DB_PASSWORD` and `DB_OWNER_PASSWORD` | `.env` and Postgres | - | Anyone who could read `.env` leaves |
+| `DB_PASSWORD` (the owner account, `hub`: database changes and backups) and `DB_APP_PASSWORD` (the app and scheduler account, `hub_app`, which reads and writes every row) | `.env` and Postgres | - | Anyone who could read `.env` leaves. Change both at once: new values in `.env`, then `docker compose up -d db && docker compose exec db sh /docker-entrypoint-initdb.d/10-roles.sh` and `docker compose up -d` (`deploy/postgres/10-roles.sh`, which comes with the database accounts) |
 | Backup key (`BACKUP_KEY_FILE`) | The server and IT's vault | - (old backup sets need the old key) | The server was broken into: BACKUPS.md, "After a security incident" |
 | `EMAIL_HOST_PASSWORD`, `TRANSLATE_API_KEY` | `.env` | When their owners rotate them | They may have leaked |
 | Push keys (`VAPID_*`) | `.env` | - (every device has to sign up again) | The private key leaked, or the database was copied: INCIDENT-PLAYBOOKS.md, playbook 8 |

@@ -30,10 +30,10 @@ posts, chats or passwords.
 
 | Alert | Sent when | Who looks, how fast |
 |---|---|---|
-| Admin rights changed | Every time someone is given or loses staff status or superuser, joins or leaves a role (group), is given or loses a permission, or a role's permissions change; and when an account with any of those is switched back on or given a new password | IT on-call, within the hour (a change made on the server: the IT service desk, by email only) |
+| Admin rights changed | Every time someone is given or loses staff status or superuser, joins or leaves a role (group), is given or loses a permission, or a role's permissions change; when an account with any of those is deleted, switched back on or given a new password; and when a role with members in it is deleted | IT on-call, within the hour (a change made on the server: the IT service desk, by email only) |
 | Many failed sign-ins | 10 failed or refused sign-ins within 15 minutes, across the whole hub | IT on-call, within the hour |
 | One person keeps hitting the limits | One person hits an activity limit 5 times within an hour | IT service desk, same working day |
-| One person is downloading many files | One person downloads 100 different library files within a day | IT service desk, same working day |
+| One person is downloading many files | One person downloads library files 100 times within a day (each file counted once per device and network address) | IT service desk, same working day |
 | One person keeps exporting their data | One person uses "Download my data" 3 times within a day | IT service desk, same working day |
 
 **How counting works.** Counts run in fixed windows that follow the clock: 15 minutes means :00 to :15, :15 to :30
@@ -50,14 +50,17 @@ a release and update this page in the same change; `hub/tests_alerts.py` checks 
 
 **The email** names the person or role (`target`) and the change, for example "given staff status (opens the admin)",
 "group added: Moderators", "permission added: Staff hub | post | Can change post", "user removed: ...",
-"admin account switched back on" or "admin account given a new password". The last two are for accounts with staff
-status, superuser, a role or a permission: waking a dormant admin account is a way back in. One save in the admin can
-send several emails, one per change.
+"admin account switched back on", "admin account given a new password", "admin account deleted" or, with the role as
+`target`, "role deleted (members: ...)". The account ones are for accounts with staff status, superuser, a role or a
+permission: waking a dormant admin account is a way back in, and deleting one takes an admin away without a trace in
+its roles. One save in the admin can send several emails, one per change.
 
 **Normal:** a new moderator or editor set up with a change ticket, someone removed at the quarterly access review
-(MAINTENANCE.md), a leaver's roles emptied, a re-hire's old account switched back on (RUNBOOK.md, "Leavers"), and the
-new break-glass password set each January or after a use. The first break-glass sign-in after a Django upgrade can
-also show "given a new password": Django re-saves the password in its newer form.
+(MAINTENANCE.md), a leaver's roles emptied, a re-hire's old account switched back on (RUNBOOK.md, "Leavers"), the
+new break-glass password set each January or after a use, and the sign-out step of INCIDENT-PLAYBOOKS.md (playbook 1,
+step 2) on an admin account ("given a new password"). The first break-glass sign-in after a Django upgrade can also
+show "given a new password": Django re-saves the password in its newer form. "Admin account deleted" at about 05:00
+is the nightly clean-up removing a leaver who was still in a role: empty a leaver's roles when they leave.
 
 **Check:**
 
@@ -70,7 +73,10 @@ also show "given a new password": Django re-saves the password in its newer form
 3. Ask the admin who made it, by phone, not through the hub.
 
 **If nobody meant it:** undo it at once (untick Staff status or Superuser, take the person out of the role, or untick
-Active on an account switched back on), then follow INCIDENT-PLAYBOOKS.md, "A compromised admin".
+Active on an account switched back on), then follow INCIDENT-PLAYBOOKS.md, "A compromised admin". A deleted role
+can't be ticked back: make it again with its permissions (INSTALL.md, step 10) and add back the members the email
+lists. A deleted admin account signs in again with its work account and gets a new, empty account: give its rights
+back after an access review. Its posts, comments and admin log entries come back only from a backup (BACKUPS.md).
 
 ### Many failed sign-ins
 
@@ -124,9 +130,11 @@ Limits on sign-in tries are left out: nobody is signed in yet, and "Many failed 
 (Admin, **Documents**; the number is in the address). `file` and `path` hold the stored, random name, which may be
 blanked out in the log; use `name` and `document_id`.
 
-**What is counted:** library files. Each file counts, and is logged, once in 24 hours per person, however often it
-is opened, so a video or a long PDF that arrives in many pieces counts once. Photos and videos in posts, and pictures
-in chats, open in the page: they are not logged or counted, so the log can't say who fetched them.
+**What is counted:** library files. Each file counts, and is logged, once in 24 hours per person, browser session and
+network address, however often it is opened there, so a video or a long PDF that arrives in many pieces counts once.
+The same file fetched from a second device or address (a thief with the account, or with a copied cookie) is a line
+and a count of its own. Photos and videos in posts, and pictures in chats, open in the page: they are not logged or
+counted, so the log can't say who fetched them.
 
 **Normal:** close to never. A new starter reading the whole library, or an editor tidying it, may come near.
 

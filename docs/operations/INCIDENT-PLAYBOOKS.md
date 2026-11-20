@@ -75,8 +75,18 @@ password into a fake page.
 
 1. **Entra ID** (Supreme's identity team): block sign-in, revoke sessions, reset the password, and remove the
    account's MFA methods so the person registers them again.
-2. **The hub:** Admin, **Users**, search the email, untick **Active**, **Save**. They are signed out at their next
-   click, and the hub stops sending them notifications.
+2. **The hub:** Admin, **Users**, search the email, untick **Active**, **Save**. The account can't open anything at
+   its next click, and the hub stops sending it notifications. That only pauses its sessions: ticking **Active**
+   again would bring a stolen session back. So **end every hub session of the account** now:
+
+   ```bash
+   docker compose exec app python manage.py shell -c "from hub.models import User; u = User.objects.get(email='name@supreme.co.uk'); u.set_unusable_password(); u.save()"
+   ```
+
+   Every browser still holding one of its sessions is signed out at its next request, whenever that is. The person
+   signs in with their work account as before; only `breakglass` needs a new password afterwards (RUNBOOK.md,
+   "Rotating keys"). For an account with staff status, a role or a permission this sends "Admin rights changed",
+   "admin account given a new password", by email only: that is expected now.
 3. **Remove every push device on the account.** An attacker may have signed their own browser up for the person's
    notifications, and it would start getting them again once the account is switched back on:
 
@@ -103,13 +113,15 @@ password into a fake page.
    ```
 
 8. **Files:** the `file_downloaded` lines (library files, by `name` and `document_id`) and the `data_exported` lines
-   show what was taken. Photos and videos in posts, and pictures in chats, aren't logged. The Data Protection Lead
-   judges whose data that exposes.
+   show what was taken. Each library file is logged once a day for each browser session and network address, so an
+   attacker's copy has its own line (look at its `ip`) even when the person opened the same file that day. Photos and
+   videos in posts, and pictures in chats, aren't logged. The Data Protection Lead judges whose data that exposes.
 
 **Recover:**
 
-9. Once Entra ID confirms the account is clean (new password, MFA set up again, the device checked), tick **Active**
-   again. The person turns push on again on their own devices (Menu, Settings, Notifications).
+9. Once Entra ID confirms the account is clean (new password, MFA set up again, the device checked), and only after
+   the sign-out command in step 2 has run, tick **Active** again. The person turns push on again on their own
+   devices (Menu, Settings, Notifications).
 10. If the account messaged colleagues, send them [S6: Watch out for fake messages](#s6-watch-out-for-fake-messages).
 
 ---
@@ -121,7 +133,8 @@ reach the server (SSH, the `docker` or `sudo` groups, `.env`, `secrets/`).
 
 **Signs:** an "Admin rights changed" alert nobody expected, especially one with no matching Admin, **Log entries**
 line (the change was made on the server, so it reached only the IT mailbox, not the SIEM), or "admin account switched
-back on" or "given a new password" for an account nobody is using; a `breakglass` sign-in nobody announced; many
+back on" or "given a new password" for an account nobody is using; "admin account deleted" or "role deleted" with no
+ticket; a `breakglass` sign-in nobody announced; many
 items hidden, restored or deleted at once; unexpected `sso_unlinked` events; backup sets missing from the off-site
 share.
 
@@ -225,7 +238,9 @@ WhatsApp, social media, the press); someone says a post was shown to people it w
 with their text unless the person chose to hide it; files saved in the phone's downloads.
 
 1. **Entra ID:** revoke the person's sessions. For a company phone, also wipe or retire it in Intune. The hub checks
-   with Microsoft at least every 15 minutes while it is in use, so the hub session ends within 15 minutes.
+   with Microsoft at least every 15 minutes, but only when a page is opened: after that a revoked phone can't open
+   pages. Chat messages sent from a page already open, and files (photos, documents) fetched straight from their
+   link, are never re-checked, so on an unlocked phone the hub session goes on working for those until step 3.
 2. **Stop notifications reaching the phone.** List the person's devices, then delete the lost one (or all of them):
 
    ```bash
@@ -234,8 +249,10 @@ with their text unless the person chose to hide it; files saved in the phone's d
    ```
 
    The person turns push on again on their new phone.
-3. If Entra ID can't be reached quickly and the phone was unlocked, untick **Active** for the person in the hub admin
-   until it can.
+3. **If the phone was unlocked,** or chats or private group posts may have been read (the breach plan's "Lost or
+   stolen phone" row: level 2), untick **Active** for the person in the hub admin and end the account's hub sessions,
+   both as in playbook 1, step 2. Tick **Active** again once Entra ID has revoked the sessions; the person then signs
+   in on their new phone as usual.
 4. Read the person's trail from the time of the loss. A `sign_in`, `file_downloaded` or `push_enabled` from an
    unknown address means the phone is being used: follow playbook 1.
 5. A personal phone with no company management can't be wiped: note that in the breach log, and ask the person to
@@ -304,8 +321,8 @@ breach, but still keep a timeline.
 **At 1 hour:** if it isn't fixed, call Hivemark AI support (contact sheet) and send [S2](#s2-still-working-on-it)
 with the time of the next update.
 
-**Entra ID down:** nobody can sign in, and people already signed in lose the hub at its next 15-minute check with
-Microsoft. Nothing in the hub can work round that for staff. Break-glass sign-in (RUNBOOK.md) is for admins with
+**Entra ID down:** nobody can sign in, and people already signed in can't open pages after the hub's next 15-minute
+check with Microsoft. Nothing in the hub can work round that for staff. Break-glass sign-in (RUNBOOK.md) is for admins with
 something that can't wait.
 
 **At 4 hours** on the same server: if it can't be fixed, start playbook 5 onto a new server.
@@ -337,8 +354,8 @@ evidence is safe and the moment to remove access is agreed. Talk by phone or ema
    into the case folder, never into email (moderation procedure).
 4. **Remove all access at the agreed time, together:**
    - Entra ID: block sign-in and revoke sessions.
-   - The hub: untick **Active** and **Superuser**, empty their **Groups** and **User permissions**, delete their push
-     devices (playbook 1, step 3). Leave **Staff status** as it was: RUNBOOK.md, "Leavers", keeps it ticked so their
+   - The hub: untick **Active** and **Superuser**, empty their **Groups** and **User permissions**, end every hub
+     session of the account (the command in playbook 1, step 2), and delete their push devices (playbook 1, step 3). Leave **Staff status** as it was: RUNBOOK.md, "Leavers", keeps it ticked so their
      account and their entries in the moderation log are kept. Each change sends an "Admin rights changed" alert,
      which is expected. Anyone who later switches the account back on or sets its password sets one off again.
    - The server and the code: SSH key, `docker` and `sudo` groups, code host access.
