@@ -26,7 +26,7 @@ makes its releases. Every task below goes into IT's change log when done: the da
 | Second Wednesday of each month | **Patching day:** the server, the containers, the Python libraries check, and the hub release with that month's merged updates. Then chase open actions from incident reviews | IT, with Hivemark AI's release | RUNBOOK.md, "Monthly patching" and "Upgrading to a new release" |
 | Within 48 hours of the news | A flaw that is being actively exploited, in anything the hub runs on | IT and Hivemark AI | [How fast a fix goes in](#how-fast-a-fix-goes-in) |
 | Every month | Moderation review | Lead moderator | `docs/compliance/moderation-procedure.md`, "Monthly review" |
-| First week of January, April, July, October | **Access review**, and check the contact sheet's numbers | Security owner and an IT administrator | RUNBOOK.md, "Quarterly access review"; INCIDENT-PLAYBOOKS.md, "Contact sheet by role" |
+| First week of January, April, July, October | **Access review**, and check the contact sheet's numbers. It also catches rights changed straight in the database, which send no alert | Security owner and an IT administrator | RUNBOOK.md, "Quarterly access review"; INCIDENT-PLAYBOOKS.md, "Contact sheet by role"; SECURITY-ALERTS.md |
 | The same week | Restore test | IT | BACKUPS.md, "Restore test, every quarter" |
 | The same week | Check the deletion jobs ran | IT and the Data Protection Lead | [Deletion check](#deletion-check) |
 | January | Change `SECRET_KEY` and the break-glass password | IT | [When to rotate each secret](#when-to-rotate-each-secret) |

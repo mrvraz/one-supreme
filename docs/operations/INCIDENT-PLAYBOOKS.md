@@ -50,10 +50,12 @@ Then: [Contact sheet by role](#contact-sheet-by-role), [Status messages](#status
 grep '"user": "name@supreme.co.uk"' incident-*.log
 ```
 
-The events are listed in RUNBOOK.md, "Alerts". The ones that matter most here: `sign_in` (with `ip`, the network
-address), `push_enabled` (a browser or phone signed up for notifications), `file_downloaded`, `data_exported`,
-`rate_limited`, `admin_rights_changed`, and the moderation events. Admin, **Log entries** shows every change made in
-the admin, by whom. Entra ID's sign-in logs show where the work account was used.
+RUNBOOK.md, "Alerts", lists the main events. The ones that matter most here: `sign_in` (with `ip`, the network
+address), `push_enabled` (a browser or phone signed up for notifications), `file_downloaded` (library files, by
+`name` and `document_id`), `data_exported`, `rate_limited`, `admin_rights_changed`, and the moderation events. Admin,
+**Log entries** shows every change made in the admin, by whom. Entra ID's sign-in logs show where the work account was
+used. Changes made on the server with `docker compose exec` are **not** in this log: their alerts reach only the IT
+mailbox (SECURITY-ALERTS.md, "How an alert reaches a person").
 
 Commands below that start `docker compose` run on the hub's server, in its folder, as in RUNBOOK.md. Replace
 `name@supreme.co.uk` with the account's email.
@@ -100,8 +102,9 @@ password into a fake page.
    docker compose exec app python manage.py shell -c "from chat.models import Message; [print(m.created_at, m.conversation_id, m.body[:80]) for m in Message.objects.filter(sender__email='name@supreme.co.uk', created_at__gte='2026-11-20T09:00:00+00:00')]"
    ```
 
-8. **Files:** the `file_downloaded` and `data_exported` lines show what was taken. The Data Protection Lead judges
-   whose data that exposes.
+8. **Files:** the `file_downloaded` lines (library files, by `name` and `document_id`) and the `data_exported` lines
+   show what was taken. Photos and videos in posts, and pictures in chats, aren't logged. The Data Protection Lead
+   judges whose data that exposes.
 
 **Recover:**
 
@@ -117,8 +120,10 @@ password into a fake page.
 reach the server (SSH, the `docker` or `sudo` groups, `.env`, `secrets/`).
 
 **Signs:** an "Admin rights changed" alert nobody expected, especially one with no matching Admin, **Log entries**
-line (the change was made on the server); a `breakglass` sign-in nobody announced; many items hidden, restored or
-deleted at once; unexpected `sso_unlinked` events; backup sets missing from the off-site share.
+line (the change was made on the server, so it reached only the IT mailbox, not the SIEM), or "admin account switched
+back on" or "given a new password" for an account nobody is using; a `breakglass` sign-in nobody announced; many
+items hidden, restored or deleted at once; unexpected `sso_unlinked` events; backup sets missing from the off-site
+share.
 
 **Usual level:** 1 (critical) for superuser, `breakglass` or server access; 2 for a role account without them.
 
@@ -134,12 +139,17 @@ deleted at once; unexpected `sso_unlinked` events; backup sets missing from the 
    grep '"event": "admin_rights_changed"' incident-*.log
    ```
 
-   Then run checks 1 to 8 of the quarterly access review (RUNBOOK.md, "Quarterly access review") now.
+   Changes made on the server aren't in that log: also search the IT mailbox for "Staff hub: admin rights changed"
+   since the attack began. Changes made straight in the database send nothing at all, so then run checks 1 to 8 of
+   the quarterly access review (RUNBOOK.md, "Quarterly access review") now.
 4. **Superuser, `breakglass` or server access:** treat the whole hub as in the attacker's hands. Follow the breach
    plan's row "Server or admin broken into" (take the hub offline), change every secret in the breach plan's step 3,
    and rebuild on a new server from a clean backup (playbook 5, "after an attack").
-5. Set `ALLOW_PASSWORD_LOGIN=0` unless break-glass sign-in is really in use, run `docker compose up -d`, and change
-   the break-glass password (RUNBOOK.md, "Rotating keys").
+5. **Only if step 4 did not take the hub offline:** set `ALLOW_PASSWORD_LOGIN=0` unless break-glass sign-in is
+   really in use, run `docker compose up -d`, and change the break-glass password (RUNBOOK.md, "Rotating keys").
+   After step 4, never run `docker compose up -d` on the compromised server: it stays switched off as evidence (breach
+   plan), and starting it would also start the 05:00 clean-up. Put `ALLOW_PASSWORD_LOGIN=0` and the new break-glass
+   password on the rebuilt server instead.
 6. If they could push code: check the code host for changes and access since the attack began (GITHUB-SETUP.md).
 
 **Find out what happened:**
@@ -176,11 +186,11 @@ WhatsApp, social media, the press); someone says a post was shown to people it w
 1. If it exposes personal data, hide the original: Admin, **Posts** or **Comments**, "Hide selected from staff". Don't
    delete it. Chat messages can't be hidden in the admin; ask the sender to delete theirs.
 2. **Was the hub showing it to the wrong people?** Check the group: Admin, **Groups and units**, open it. Is it
-   private? Are the members right? For news, check the audience on the item. Count who the post is shown to (the
-   post's number is in its address):
+   private? Are the members right? For news, check the audience on the item. Count who can open the post, moderators
+   included (the post's number is in its address):
 
    ```bash
-   docker compose exec app python manage.py shell -c "from hub.models import Post; from hub.publishing import post_audience; p = Post.objects.get(pk=123); print(p.community, post_audience(p).count())"
+   docker compose exec app python manage.py shell -c "from hub.models import Post, User; p = Post.objects.get(pk=123); print(p.community, sum(Post.objects.filter(pk=p.pk).viewable_by(u).exists() for u in User.objects.filter(is_active=True)))"
    ```
 
    Fix the members or the audience. If a bug causes it, take the hub offline (breach plan) until Hivemark AI ships a
@@ -189,8 +199,10 @@ WhatsApp, social media, the press); someone says a post was shown to people it w
 **Find out what happened:**
 
 3. Who opened it: news that asks for confirmation shows names on "See who has confirmed". Other news records its
-   readers only in the database (`PostRead`); listing them needs the Data Protection Lead's OK, as for chat. Files
-   attached to the post show in `file_downloaded` lines. Ordinary posts and chats don't record who read them.
+   readers only in the database (`PostRead`); listing them needs the Data Protection Lead's OK, as for chat.
+   Ordinary posts and chats don't record who read them. **Photos and videos in the post, and pictures in a chat,
+   aren't logged either:** nothing says who fetched them. Only library files linked from it show, in
+   `file_downloaded` lines (by `name` and `document_id`).
 4. A screenshot often shows whose screen it was (their name in the menu, their look). For a chat, the members at the
    time are the only possible sources; reading the chat itself needs the Data Protection Lead's OK, recorded in the
    breach log.
@@ -325,8 +337,10 @@ evidence is safe and the moment to remove access is agreed. Talk by phone or ema
    into the case folder, never into email (moderation procedure).
 4. **Remove all access at the agreed time, together:**
    - Entra ID: block sign-in and revoke sessions.
-   - The hub: untick **Active**, empty their **Groups**, delete their push devices (playbook 1, step 3). Leave staff
-     status ticked so their entries in the moderation log are kept (RUNBOOK.md, "Leavers").
+   - The hub: untick **Active** and **Superuser**, empty their **Groups** and **User permissions**, delete their push
+     devices (playbook 1, step 3). Leave **Staff status** as it was: RUNBOOK.md, "Leavers", keeps it ticked so their
+     account and their entries in the moderation log are kept. Each change sends an "Admin rights changed" alert,
+     which is expected. Anyone who later switches the account back on or sets its password sets one off again.
    - The server and the code: SSH key, `docker` and `sudo` groups, code host access.
    - Secrets they could read: change them (MAINTENANCE.md, "When to rotate each secret"), including the break-glass
      password if they knew it.
@@ -420,18 +434,18 @@ Keep them short, say only what is known, and always give the time of the next up
 
 ### S1: We know about it
 
-> Subject: Supreme Hub isn't working right now
+> Subject: One Supreme isn't working right now
 >
-> Supreme Hub isn't working for [everyone / some people] at the moment. We know and we're on it. Your other work
+> One Supreme isn't working for [everyone / some people] at the moment. We know and we're on it. Your other work
 > systems are fine. Next update by [time].
 >
 > IT Service Desk
 
 ### S2: Still working on it
 
-> Subject: Supreme Hub: update at [time]
+> Subject: One Supreme: update at [time]
 >
-> Supreme Hub is still unavailable. [One sentence on what we're doing, for example: we're moving it to a spare
+> One Supreme is still unavailable. [One sentence on what we're doing, for example: we're moving it to a spare
 > server.] We expect it back [by time / later today / we don't know yet]. Next update by [time]. For anything urgent,
 > use email or speak to your manager.
 >
@@ -439,9 +453,9 @@ Keep them short, say only what is known, and always give the time of the next up
 
 ### S3: Part of the hub is switched off
 
-> Subject: Supreme Hub: [push notifications / uploads / sign-in with a password] switched off for now
+> Subject: One Supreme: [push notifications / uploads / sign-in with a password] switched off for now
 >
-> We've switched off [feature] in Supreme Hub while we fix a problem. Everything else works as usual. [What people
+> We've switched off [feature] in One Supreme while we fix a problem. Everything else works as usual. [What people
 > can do instead, for example: open the hub to see your notifications.] We'll tell you when it's back.
 >
 > IT Service Desk
@@ -450,18 +464,18 @@ Keep them short, say only what is known, and always give the time of the next up
 
 Send 2 working days before, and again 1 hour before.
 
-> Subject: Supreme Hub will be offline on [day] from [time] to [time]
+> Subject: One Supreme will be offline on [day] from [time] to [time]
 >
-> We're updating Supreme Hub on [day] between [time] and [time]. You won't be able to use it then. Nothing you've
+> We're updating One Supreme on [day] between [time] and [time]. You won't be able to use it then. Nothing you've
 > posted will be lost. [If needed: You may need to sign in again afterwards.]
 >
 > IT Service Desk
 
 ### S5: Please sign in again
 
-> Subject: Supreme Hub: please sign in again
+> Subject: One Supreme: please sign in again
 >
-> To keep the hub safe, we've signed everyone out. Open Supreme Hub and sign in with your work account as usual. If
+> To keep the hub safe, we've signed everyone out. Open One Supreme and sign in with your work account as usual. If
 > it asks you to sign in to Microsoft, check the address starts with https://login.microsoftonline.com before you type
 > anything.
 >
@@ -469,26 +483,26 @@ Send 2 working days before, and again 1 hour before.
 
 ### S6: Watch out for fake messages
 
-> Subject: Watch out for fake messages on Supreme Hub
+> Subject: Watch out for fake messages on One Supreme
 >
 > On [date], [one sentence, for example: someone else used a colleague's account and sent links in chat]. If you got a
 > message or notification asking you to [what it asked], don't open the link and don't type your password. If you
-> already did, change your Microsoft password now and tell the IT Service Desk. Supreme Hub and IT will never ask for
+> already did, change your Microsoft password now and tell the IT Service Desk. One Supreme and IT will never ask for
 > your password in a message or notification.
 >
 > IT Service Desk
 
 ### S7: Turn push notifications off and on again
 
-> Subject: Supreme Hub: please switch notifications off and on again
+> Subject: One Supreme: please switch notifications off and on again
 >
-> We've changed the keys that send Supreme Hub notifications. On every phone or computer where you get them, open the
+> We've changed the keys that send One Supreme notifications. On every phone or computer where you get them, open the
 > hub, go to Menu, Settings, Notifications, choose "Turn off for this device", then "Turn on for this device". Until
 > you do, you won't get notifications from the hub, and anything that still arrives in its name isn't from us.
 >
 > IT Service Desk
 
-**At the shift briefing** (read out, 30 seconds): "Supreme Hub is [down / partly off] because [one plain reason]. IT
+**At the shift briefing** (read out, 30 seconds): "One Supreme is [down / partly off] because [one plain reason]. IT
 is on it and expects it back [when]. Your shift details are on the board as usual. If you get a strange message or
 notification from the hub, don't tap it: tell your shift manager."
 
@@ -512,7 +526,7 @@ discussion isn't finished, and note what was left open.
 | Time | Inject (read out) | Questions |
 |---|---|---|
 | 0:00 | Monday 08:40. The service desk gets an email from an outside address with a spreadsheet of 40 staff: names, job titles, mobile numbers and birthdays, "from your intranet". It asks for money, or the full list goes public. | Who leads? What level is this (breach plan)? Who is called, and how, if email might be watched? What is the very first thing done on the server? When does the 72-hour clock start? |
-| 0:15 | The SIEM shows an "Admin rights changed" alert from Saturday 02:13: a moderator's account was made a superuser. Admin, Log entries has no line for it. | What does the missing log line tell you? Which playbook now? Who decides to take the hub offline, and what do staff hear (which message)? Which secrets must change? |
+| 0:15 | Unread in the IT mailbox since Saturday 02:13: "Staff hub: admin rights changed", a moderator's account made a superuser. Admin, Log entries has no line for it, and the SIEM has no `security_alert` line for it either, so nobody was paged. | What do the missing lines tell you? Which playbook now? Who decides to take the hub offline, and what do staff hear (which message)? Which secrets must change? Should the IT mailbox be read at weekends? |
 | 0:30 | The storage team says the last three nightly sets are missing from the off-site share. | Which backup can be trusted? Same server or new? How long until the hub is back (BACKUPS.md targets)? What about the backup key? |
 | 0:45 | A journalist calls Communications. On the warehouse early shift, people ask the shift manager why the hub is down. | What is said, by whom, approved by whom? Pick the messages. What is said at the shift briefing? |
 | 1:00 | Tuesday 16:00. Some facts are still unknown. | Does the Data Protection Lead report to the ICO, and by when exactly? What goes in the report? Are the 40 people told, and how? Is the insurer told? The police? |
@@ -522,9 +536,9 @@ discussion isn't finished, and note what was left open.
 example); a manager's stolen phone showing notifications on its lock screen; a leaver downloading the library the
 week before they go; notifications telling staff to "confirm your password" on a fake site.
 
-**At the end:** run the alert test in SECURITY-ALERTS.md, "Test the alerts", and check that the email arrives and the
-on-call engineer is paged. Then write up the exercise with the review template below, and file the actions like an
-incident's.
+**At the end:** run the alert test in SECURITY-ALERTS.md, "Test the alerts" (a change in the admin), and check that
+the emails arrive and the on-call engineer is paged. Then write up the exercise with the review template below, and
+file the actions like an incident's.
 
 ## Post-incident review
 
