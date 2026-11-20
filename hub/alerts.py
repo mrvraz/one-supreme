@@ -1,13 +1,18 @@
 """Security alerts: emails the admins (ADMIN_EMAILS) when the security log shows something a person must look at.
 
-hub.security.audit() passes every event to check(). docs/operations/SECURITY-ALERTS.md says what to do for each alert.
+hub.security.audit() passes every event to check(). This module also logs admin rights given or taken away.
+docs/operations/SECURITY-ALERTS.md says what to do for each alert.
 """
 
 import logging
 import time
 
+from django.conf import settings
 from django.core.cache import cache
 from django.core.mail import mail_admins
+from django.db import transaction
+from django.db.models.signals import m2m_changed, pre_save
+from django.dispatch import receiver
 
 log = logging.getLogger("hub.security")
 
@@ -56,3 +61,45 @@ def check(event, details):
     log.warning("security_alert", extra={"details": {"alert": alert, "trigger": event}})
     # A broken mail relay must not break the sign-in or the admin save that set this off; the log line above stays.
     mail_admins(f"Staff hub: {alert.lower()}", "\n".join(lines), fail_silently=True)
+
+
+# --- Admin rights ------------------------------------------------------------------
+# Caught at the model, so a change made on the server (shell, createsuperuser) is logged as well as one in the admin.
+# Admin > Log entries shows who made a change in the admin.
+
+ADMIN_FLAGS = {"is_staff": "staff status (opens the admin)", "is_superuser": "superuser (every permission)"}
+
+
+def _name(obj):
+    return getattr(obj, "email", "") or str(obj)
+
+
+def _rights_changed(target, change):
+    from .security import audit  # here: hub.security imports this module
+
+    target = _name(target)
+    # Logged once the save is committed, so a form that fails half-way can't report a change that never happened.
+    transaction.on_commit(lambda: audit("admin_rights_changed", level=logging.WARNING, target=target, change=change))
+
+
+@receiver(pre_save, sender=settings.AUTH_USER_MODEL)
+def _admin_flags_changed(sender, instance, update_fields=None, **kwargs):
+    if update_fields is not None and not ADMIN_FLAGS.keys() & set(update_fields):
+        return  # e.g. last_login on every sign-in
+    before = sender.objects.filter(pk=instance.pk).values(*ADMIN_FLAGS).first() if instance.pk else None
+    for flag, label in ADMIN_FLAGS.items():
+        now = bool(getattr(instance, flag))
+        if now != bool(before and before[flag]):
+            _rights_changed(instance, f"{'given' if now else 'lost'} {label}")
+
+
+def _roles_changed(sender, instance, action, model, pk_set, **kwargs):
+    if action in ("post_add", "post_remove", "post_clear"):
+        changed = "all" if pk_set is None else ", ".join(map(_name, model.objects.filter(pk__in=pk_set)))
+        _rights_changed(instance, f"{model._meta.verbose_name} {'added' if action == 'post_add' else 'removed'}: {changed}")
+
+
+# The tables linking people to roles (groups) and permissions, and roles to permissions. Named as strings
+# because this module loads with the logging setup (through hub.security), before the models exist.
+for _link in (f"{settings.AUTH_USER_MODEL}_groups", f"{settings.AUTH_USER_MODEL}_user_permissions", "auth.Group_permissions"):
+    m2m_changed.connect(_roles_changed, sender=_link)
