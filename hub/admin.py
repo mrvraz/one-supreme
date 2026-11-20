@@ -6,12 +6,17 @@ from django.conf import settings
 from django.contrib import admin
 from django.contrib.admin.models import LogEntry
 from django.contrib.auth.admin import UserAdmin
+from django.core.exceptions import PermissionDenied
+from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import RSVP, Attachment, Comment, Community, Event, FeatureNote, Post, Report, User
+from .models import (
+    DELETED_KEEP_DAYS, RSVP, Attachment, Comment, Community, Event, FeatureNote, Post, Report, User, kept_as_evidence,
+)
 from .security import audit
+from .views import soft_delete
 
 
 @admin.register(User)
@@ -63,12 +68,53 @@ def restore(modeladmin, request, queryset):
         audit("content_restored", request, item=f"{obj._meta.model_name} {obj.pk}")
 
 
-class ModeratedAdmin(admin.ModelAdmin):
+@admin.action(description=f"Delete selected (removed for good after {DELETED_KEEP_DAYS} days)", permissions=["soft_delete"])
+def delete_later(modeladmin, request, queryset):
+    for obj in queryset.filter(deleted_at__isnull=True):
+        soft_delete(request, obj, by_moderator=obj.author_id != request.user.pk)
+
+
+def _kept(request):
+    # Once per request: deleting a user, group or event asks has_delete_permission about every post it would take.
+    if not hasattr(request, "kept_as_evidence"):
+        request.kept_as_evidence = kept_as_evidence()
+    return request.kept_as_evidence
+
+
+class NoDeletePage:
+    """Django's delete is for good and skips the 30-day keep, so posts, comments and reports never get a Delete page.
+
+    They still go with a user, group or event deleted here: Django then asks has_delete_permission about each one.
+    """
+
+    def delete_view(self, request, object_id, extra_context=None):
+        raise PermissionDenied
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        return super().change_view(request, object_id, form_url, {**(extra_context or {}), "show_delete": False})
+
+
+class ModeratedAdmin(NoDeletePage, admin.ModelAdmin):
     """Shared by posts and comments: hidden and deleted items stay visible here for moderators and HR."""
+
+    def get_readonly_fields(self, request, obj=None):
+        # Moderators hide, restore and pin. Changing who wrote something, what it says or where it went is impersonation.
+        fields = super().get_readonly_fields(request, obj)
+        return fields if request.user.is_superuser else (*fields, *self.authored)
 
     list_filter = ("is_hidden", ("deleted_at", admin.EmptyFieldListFilter))
     readonly_fields = ("deleted_at", "deleted_by")
-    actions = [hide, unhide, restore]
+    actions = [hide, unhide, delete_later, restore]
+
+    def has_delete_permission(self, request, obj=None):
+        # No Django "Delete selected" (obj is None), and nothing an open report keeps goes with a user, group or event.
+        if obj is None:
+            return False
+        kept = _kept(request)[0 if isinstance(obj, Post) else 1]
+        return super().has_delete_permission(request, obj) and obj.pk not in kept
+
+    def has_soft_delete_permission(self, request):
+        return super().has_delete_permission(request)
 
 
 class AttachmentInline(admin.TabularInline):
@@ -91,6 +137,7 @@ class PostAdmin(ModeratedAdmin):
     search_fields = ("body", "author__email", "author__first_name", "author__last_name")
     raw_id_fields = ("author",)
     inlines = [AttachmentInline]
+    authored = ("author", "community", "audiences", "title", "body", "kind", "created_at", "event", "mentions")
 
 
 @admin.register(Comment)
@@ -98,10 +145,11 @@ class CommentAdmin(ModeratedAdmin):
     list_display = ("__str__", "author", "post", "is_hidden", "deleted_at", "created_at")
     search_fields = ("body", "author__email")
     raw_id_fields = ("author", "post")
+    authored = ("author", "post", "body", "created_at")
 
 
 @admin.register(Report)
-class ReportAdmin(admin.ModelAdmin):
+class ReportAdmin(NoDeletePage, admin.ModelAdmin):
     list_display = ("__str__", "content", "reason", "reporter", "created_at", "resolved_at")
     list_filter = (("resolved_at", admin.EmptyFieldListFilter),)
     readonly_fields = ("reporter", "post", "comment", "person", "reason", "created_at", "resolved_at", "resolved_by", "content")
@@ -109,6 +157,15 @@ class ReportAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False  # reports come from staff using the Report link, not from the admin
+
+    def has_delete_permission(self, request, obj=None):
+        # A closed report goes with what it is about (see purge, and NoDeletePage); an open one never does.
+        return obj is not None and obj.resolved_at is not None and super().has_delete_permission(request, obj)
+
+    def get_queryset(self, request):
+        # Nobody sees a report about themselves, or who made it: another moderator handles it.
+        me = request.user
+        return super().get_queryset(request).exclude(Q(person=me) | Q(post__author=me) | Q(comment__author=me))
 
     @admin.display(description="Reported content")
     def content(self, obj):

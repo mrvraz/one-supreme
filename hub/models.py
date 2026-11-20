@@ -644,3 +644,22 @@ class Report(models.Model):
         if self.comment_id:
             return f"comment {self.comment_id}"
         return f"person {self.person_id}"
+
+
+def kept_as_evidence():
+    """The ids of posts and comments an open report keeps: nothing may remove them for good until a moderator closes it.
+
+    Used by the daily clean-up (purge), event delete and the admin. Returns (post ids, comment ids).
+    """
+    open_reports = Report.objects.filter(resolved_at__isnull=True)
+    posts = set(open_reports.values_list("post_id", flat=True)) | set(open_reports.values_list("comment__post_id", flat=True))
+    comments = set(open_reports.values_list("comment_id", flat=True))
+    # A report about a person keeps everything they wrote, as chat does (chat.hooks.purge): HR may need it.
+    people = open_reports.exclude(person=None).values("person")
+    posts |= set(Post.objects.filter(author__in=people).values_list("pk", flat=True))
+    for pk, post_id, parent_id in Comment.objects.filter(author__in=people).values_list("pk", "post_id", "parent_id"):
+        comments |= {pk, parent_id}
+        posts.add(post_id)  # deleting a post deletes its comments
+    # Deleting a comment deletes its replies, so a reported reply also keeps its parent (replies are one level deep).
+    comments |= set(open_reports.values_list("comment__parent_id", flat=True))
+    return posts - {None}, comments - {None}

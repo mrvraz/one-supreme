@@ -41,7 +41,6 @@ from .models import (
 from .security import record_change
 
 TABLE = Path(settings.BASE_DIR) / "docs" / "security" / "ACCESS-MATRIX.md"
-TEMP_MEDIA = tempfile.mkdtemp()
 
 # Column in the table -> the test user who plays that part (made in setUpTestData). None is nobody signed in.
 SIGNED_IN = {
@@ -50,7 +49,10 @@ SIGNED_IN = {
 }
 OUTSIDE = {"Signed out": None, "Leaver": "leaver", "New starter": "starter"}
 OUTSIDE_USUALLY = {"Signed out": "sign in", "Leaver": "sign in", "New starter": "rules"}  # when the table says nothing
-NO_STAFF = ["colleague", "member", "author", "publisher", "editor", "orgadmin"]  # the admin's "No staff status"
+NO_STAFF = ["colleague", "member", "author", "editor"]  # the admin's "No staff status"
+# The admin sections table: (name in brackets) -> test user. The first two need a row for every section; the others
+# are refused wherever they have none.
+ADMIN_STAFF = {"moderator": "moderator", "superuser": "superuser", "publisher": "publisher", "org admin": "orgadmin"}
 ADMIN_KINDS = {"changelist": "List", "add": "Add", "change": "Open", "history": "History", "delete": "Delete"}
 COLUMNS = {*SIGNED_IN, *OUTSIDE, "No staff status", *ADMIN_KINDS.values()}
 
@@ -184,7 +186,7 @@ def allow(user, *codenames):
 
 
 @override_settings(
-    MEDIA_ROOT=TEMP_MEDIA, TRANSLATE_URL="http://translate.invalid", OIDC_RP_CLIENT_ID="matrix",
+    TRANSLATE_URL="http://translate.invalid", OIDC_RP_CLIENT_ID="matrix",
     OIDC_OP_AUTHORIZATION_ENDPOINT="https://sign-in.invalid/authorize", OIDC_OP_TOKEN_ENDPOINT="https://sign-in.invalid/token",
     OIDC_OP_USER_ENDPOINT="https://sign-in.invalid/userinfo", LOGIN_REDIRECT_URL_FAILURE="/login/?error=sso",
 )
@@ -192,9 +194,12 @@ class AccessMatrix(TestCase):
     """The cast, the records they own, one signed-in browser each, and the checks the tests below share."""
 
     @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        shutil.rmtree(TEMP_MEDIA, ignore_errors=True)
+    def setUpClass(cls):
+        # A folder per class: CI's parallel workers run the classes side by side, and each deletes its own at the end.
+        media = tempfile.mkdtemp()
+        cls.addClassCleanup(shutil.rmtree, media, ignore_errors=True)
+        cls.enterClassContext(override_settings(MEDIA_ROOT=media))
+        super().setUpClass()
 
     @classmethod
     def setUpTestData(cls):
@@ -203,8 +208,10 @@ class AccessMatrix(TestCase):
             return User.objects.create_user(name, f"{name}@example.com", first_name=name.title(), last_name="Test", **extra)
 
         f = cls.f = SimpleNamespace()
-        for name in ("colleague", "member", "author", "publisher", "editor", "orgadmin"):
+        for name in ("colleague", "member", "author", "editor"):
             setattr(f, name, person(name))
+        # Communications and org admins also work in the admin (units, What's new), so they get staff status as at Supreme.
+        f.publisher, f.orgadmin = person("publisher", is_staff=True), person("orgadmin", is_staff=True)
         f.starter = person("starter", policy_version="")
         f.leaver = person("leaver", is_active=False)
         f.moderator = person("moderator", is_staff=True)
@@ -287,7 +294,8 @@ class AccessMatrix(TestCase):
             self.addCleanup(patcher.stop)
 
     def payload(self, name):
-        """What the forms send: enough for most actions to really happen, so "yes" means it did."""
+        """What the forms send: enough for most actions to go ahead. "yes" only means the access check let the request
+        through; what each action then does is checked in tests_features and the other test modules."""
         f = self.f
         if name.startswith("push_"):
             return {"endpoint": "https://fcm.googleapis.com/fcm/send/matrix", "keys": {"p256dh": "key", "auth": "secret"}}
@@ -371,6 +379,8 @@ class PagesForEveryone(AccessMatrix):
         for label in sections:
             for who in ("moderator", "superuser"):
                 self.assertTrue((label, who) in self.table, f"The admin section {label} has no row for the {who}")
+        cases = {case for name, case in self.table if name in sections}
+        self.assertEqual(cases - set(ADMIN_STAFF), set(), "Admin section rows for someone the test doesn't play")
         known = {name for name, _route in addresses()} | sections
         self.assertEqual({name for name, _case in self.table} - known, set(), f"Rows in {TABLE.name} for addresses that are gone")
         self.assertEqual({case for name, case in CASES if name == "media"}, set(plugins.MEDIA_GUARDS), "One media row per folder")
@@ -402,6 +412,13 @@ class PagesForEveryone(AccessMatrix):
         if wrong:
             self.fail(f"{len(wrong)} answers differ from {TABLE.name}:\n" + "\n".join(wrong))
 
+    def test_only_staff_status_sends_an_announcement(self):
+        """The feed's Announcement tick pins a post and tells everyone. It comes with staff status and nothing else."""
+        for who, kept in [("colleague", False), ("editor", False), ("publisher", True), ("orgadmin", True)]:
+            response = self.clients[who].post(reverse("feed"), {"body": f"From the {who}", "is_announcement": "on"})
+            self.assertEqual(response.status_code, 302, who)
+            self.assertEqual(Post.objects.get(body=f"From the {who}").is_announcement, kept, who)
+
     def test_a_private_groups_page_lists_its_posts_only_for_those_who_may_open_them(self):
         page = reverse("community", args=[self.f.group.slug])
         self.assertContains(self.clients["member"].get(page), "Lunch?")
@@ -432,12 +449,13 @@ class AdminPages(AccessMatrix):
 
     def test_admin_pages_that_are_not_about_one_model(self):
         pages = [(name, route) for name, route in addresses() if route.startswith("admin/")]
-        self.check(pages, {**OUTSIDE, "Moderator": "moderator", "Superuser": "superuser"}, follow=True)
+        staff = {"Publisher": "publisher", "Org admin": "orgadmin", "Moderator": "moderator", "Superuser": "superuser"}
+        self.check(pages, {**OUTSIDE, **staff}, follow=True)
         for who in NO_STAFF:
             self.check(pages, {"No staff status": who}, follow=True)
 
     def test_every_admin_section(self):
-        """Per model, what a moderator and a superuser can open. Nobody else gets in at all."""
+        """Per model, what each person with staff status can open. Nobody else gets in at all."""
         wrong = []
         models = {model._meta.label_lower: model for model in admin.site._registry}
         for _name, route in routes():
@@ -449,9 +467,9 @@ class AdminPages(AccessMatrix):
             url = "/" + re.sub(r"<[^>]+>", str(obj.pk), route)
             column = ADMIN_KINDS["change" if kind == "redirect" else kind]
             for method in ("GET", "POST"):
-                # "view only": the page opens, but saving is refused. The bare address only redirects to the page.
+                # "view only": the page opens, but saving or deleting is refused. The bare address only redirects.
                 saving = method == "POST" and kind != "redirect"
-                cells = {who: self.cell((label, who), "GET", column) for who in ("moderator", "superuser")}
+                cells = {who: self.cell((label, case), "GET", column) or "refused" for case, who in ADMIN_STAFF.items()}
                 cells = {who: {"view only": "refused" if saving else "yes"}.get(cell, cell) for who, cell in cells.items()}
                 for who, want in [*cells.items(), ("colleague", "refused"), ("starter", "rules"), (None, "sign in")]:
                     got = self.ask(who, method, url, follow=True)
@@ -459,3 +477,21 @@ class AdminPages(AccessMatrix):
                         wrong.append(f"{url} {method} {who}: expected {want!r}, page gives {got!r}")
         if wrong:
             self.fail(f"{len(wrong)} answers differ from {TABLE.name}:\n" + "\n".join(wrong))
+
+    def test_a_moderator_cannot_change_who_wrote_something_or_where_it_went(self):
+        """Saving works (they may hide it), but the author, the group, the words and the date stay as they were."""
+        f = self.f
+        # A whole form, so that without the rule it would save the new author: the test then fails on what changed.
+        moved = {"author": f.superuser.pk, "community": "", "post": f.news.pk, "body": "Changed", "kind": Post.UPDATE,
+                 "created_at_0": "2020-01-01", "created_at_1": "09:00:00", "is_hidden": "on"}
+        post_only = {"attachments-TOTAL_FORMS": 1, "attachments-INITIAL_FORMS": 1, "attachments-0-id": f.attachment.pk,
+                     "attachments-0-post": f.poll.pk, "last_activity_at_0": "2026-11-20", "last_activity_at_1": "09:00:00"}
+        for item, extra in [(f.poll, post_only), (f.comment, {})]:
+            url = reverse(f"admin:hub_{item._meta.model_name}_change", args=[item.pk])
+            theirs = ("is_hidden", "last_activity_at")  # what a moderator may change here
+            fields = [field.attname for field in item._meta.concrete_fields if field.name not in theirs]
+            rows = type(item).objects.filter(pk=item.pk)
+            before = rows.values(*fields).get()
+            self.assertEqual(self.clients["moderator"].post(url, {**moved, **extra}).status_code, 302, url)
+            self.assertTrue(rows.get().is_hidden, url)
+            self.assertEqual(rows.values(*fields).get(), before, url)

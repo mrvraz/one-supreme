@@ -18,14 +18,22 @@ a new page fails the test until someone adds a row here and so decides who may o
 | Colleague | Ordinary staff. Not in the private group or the chat, and wrote none of the records. | What every member of staff has. |
 | Member | In the private group and in its group chat. | The same as a colleague. |
 | Author | Wrote the poll, the comment, the event and the chat message. Started the private group (so is its admin) and the chat. Is the vacancy's recruiter, and has one alert. | The same as a colleague. |
-| Publisher | The Communications role. Wrote the must-read news, sent only to the private group, without being in it. | "Can publish news" and "Can view usage figures". |
+| Publisher | The Communications role, with staff status. Wrote the must-read news, sent only to the private group, without being in it. | "Can publish news" and "Can view usage figures". |
 | Editor | The Editors role. This is what a manager gets: Supreme's managers have no separate role in the hub. Added the journey and the vacancy. | Add, change and delete files, folders, featured links, articles, categories, journeys and vacancies. |
-| Org admin | The Organisation admins role. | Change groups and units. This makes them an admin of every group and unit. |
+| Org admin | The Organisation admins role, with staff status. | Change groups and units. This makes them an admin of every group and unit. |
 | Moderator | The Moderators role, with staff status. | View, change and delete posts, comments and reports. View the audit log. |
 | Superuser | Superuser and staff status. | Every permission. |
 
-The roles are set up as README.md ("Roles") tells Supreme's IT to set them up. Only the Moderator and the Superuser have staff
-status, so only they can get into the admin.
+The roles are set up as README.md ("Roles") tells Supreme's IT to set them up. The publisher, the org admin, the moderator
+and the superuser have staff status, because their work needs the admin (units and What's new entries are only made there).
+The editor doesn't.
+
+**What staff status gives on its own,** whatever the role:
+
+- **The admin home.** Inside it, each person sees only the sections their role allows (see "The admin" below).
+- **The Announcement tick on the feed.** It pins a post to the top of everyone's feed and sends an alert to all staff. Without
+  staff status the tick isn't shown, and if it is sent anyway it is ignored. Decided: this stays with staff status. Only a
+  handful of named people have it, and every announcement says who posted it.
 
 The records belong to a **private group** ("Private project"). The author is its admin and the member is in it; nobody else
 is. In it are a poll with a photo and a comment, an event, a folder with a file, a featured link and a group chat. The
@@ -36,13 +44,13 @@ article and a draft journey with a cover.
 
 | Answer | What happens |
 |---|---|
-| yes | The page opens, or the action is done. |
+| yes | The access check lets the request through: the page opens, or the form is taken. What the action then does is checked by the other tests (`hub/tests_features.py` and the rest), not here. |
 | hidden | "Not found" (404). They can't even tell it exists. |
 | refused | "Forbidden" (403). They may not do this. |
 | wrong method | "Method not allowed" (405). A button's address followed as a plain link. Nothing happens. |
 | sign in | Sent to the sign-in page. Also after signing out. |
 | rules | Sent to the house rules first. |
-| view only | In the admin: the page opens, but saving is refused. |
+| view only | In the admin: the page opens, but saving or deleting is refused. |
 
 A row with the method POST is a button: the same address followed as a link gets "wrong method" from everyone signed in,
 unless the table has a GET row for it too.
@@ -130,8 +138,11 @@ Signed-out people and leavers are sent to the sign-in page, and new starters to 
 | See a translation of a comment | `translate` (comment) | POST | hidden | yes | yes | hidden | hidden | hidden | yes | yes |
 | My scheduled posts and drafts | `scheduled` | GET, POST | yes | yes | yes | yes | yes | yes | yes | yes |
 
+- Posting to the feed is open to everyone, but the Announcement tick only works with staff status (here the publisher, org
+  admin, moderator and superuser). From anyone else the post goes up as an ordinary one.
 - Only the author edits a post or publishes it early. The group's admins (here the author) and moderators pin it.
-- Moderators open every post, hidden and deleted ones too, so they can judge reports.
+- Moderators open every live post, private groups' too, so they can judge reports, and they see the photos of hidden and
+  deleted posts. Hidden and deleted posts themselves are "hidden" here for everyone; moderators find them in the admin.
 - The person reported can't report themselves.
 - Translation needs a translation server (`TRANSLATE_URL`). Without one, everyone gets "hidden".
 
@@ -143,11 +154,13 @@ Signed-out people and leavers are sent to the sign-in page, and new starters to 
 | Write news | `news_new` | GET, POST | refused | refused | refused | yes | refused | refused | refused | yes |
 | Edit news | `news_edit` | GET, POST | refused | refused | refused | yes | refused | refused | refused | yes |
 | Confirm I've read must-read news | `news_ack` | POST | hidden | yes | yes | yes | hidden | hidden | yes | yes |
-| Who has confirmed must-read news | `news_readers` | GET, POST | hidden | refused | refused | yes | hidden | hidden | refused | yes |
+| Who has confirmed must-read news | `news_readers` | GET, POST | hidden | refused | refused | hidden | hidden | hidden | refused | yes |
 
 - Writing news needs "Can publish news". Editing someone else's news also needs the moderators' change right.
-- Who has confirmed: its author and other publishers who can see it. Its readers are refused, and people it wasn't sent to
-  get "hidden", so the list can't show who is in a private group.
+- Who has confirmed: its author and other publishers. People it wasn't sent to get "hidden", and its readers are refused.
+  If it went to a private group, only people who can see that group get the list, so it never shows who is in a group to
+  someone outside it. Here that means "hidden" for the publisher, although they wrote it. Units don't count:
+  Communications send news to any unit and still see who has confirmed.
 
 ### People
 
@@ -333,49 +346,53 @@ Signed-out people and leavers are sent to the sign-in page, and new starters to 
 The admin is Django's own, with Django's permissions. Only people with staff status get in. Everyone else signed in is
 refused, so the admin can't be reached by changing a link.
 
-| Admin page | Address | Method | Signed out | Leaver | New starter | No staff status | Moderator | Superuser |
-|---|---|---|---|---|---|---|---|---|
-| Admin sign-in (sends you to the hub's sign-in) | `admin_login` | GET, POST | sign in | sign in | rules | refused | yes | yes |
-| Django's own admin sign-in (never reached: the one above comes first) | `admin:login` | GET, POST | sign in | sign in | rules | refused | yes | yes |
-| Admin home | `admin:index` | GET, POST | sign in | sign in | rules | refused | yes | yes |
-| Admin sign-out | `admin:logout` | GET | sign in | sign in | rules | refused | wrong method | wrong method |
-| Admin sign-out | `admin:logout` | POST | sign in | sign in | rules | refused | sign in | sign in |
-| Change my password | `admin:password_change` | GET, POST | sign in | sign in | rules | refused | yes | yes |
-| Password changed | `admin:password_change_done` | GET | sign in | sign in | rules | refused | yes | yes |
-| Password changed | `admin:password_change_done` | POST | sign in | sign in | rules | refused | wrong method | wrong method |
-| Search box helper | `admin:autocomplete` | GET | sign in | sign in | rules | refused | refused | refused |
-| Search box helper | `admin:autocomplete` | POST | sign in | sign in | rules | refused | wrong method | wrong method |
-| Admin translations | `admin:jsi18n` | GET | sign in | sign in | rules | refused | yes | yes |
-| Admin translations | `admin:jsi18n` | POST | sign in | sign in | rules | refused | wrong method | wrong method |
-| "View on site" | `admin:view_on_site` | GET, POST | sign in | sign in | rules | refused | yes | yes |
-| Staff hub section | `admin:app_list` (hub) | GET, POST | sign in | sign in | rules | refused | yes | yes |
-| Audit log section | `admin:app_list` (admin) | GET, POST | sign in | sign in | rules | refused | yes | yes |
-| Permission roles section | `admin:app_list` (auth) | GET, POST | sign in | sign in | rules | refused | hidden | yes |
-| Library section | `admin:app_list` (library) | GET, POST | sign in | sign in | rules | refused | hidden | yes |
-| Any other admin address | `admin:catch_all` | GET, POST | sign in | sign in | rules | refused | hidden | hidden |
+| Admin page | Address | Method | Signed out | Leaver | New starter | No staff status | Publisher | Org admin | Moderator | Superuser |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Admin sign-in (sends you to the hub's sign-in) | `admin_login` | GET, POST | sign in | sign in | rules | refused | yes | yes | yes | yes |
+| Django's own admin sign-in (never reached: the one above comes first) | `admin:login` | GET, POST | sign in | sign in | rules | refused | yes | yes | yes | yes |
+| Admin home | `admin:index` | GET, POST | sign in | sign in | rules | refused | yes | yes | yes | yes |
+| Admin sign-out | `admin:logout` | GET | sign in | sign in | rules | refused | wrong method | wrong method | wrong method | wrong method |
+| Admin sign-out | `admin:logout` | POST | sign in | sign in | rules | refused | sign in | sign in | sign in | sign in |
+| Change my password | `admin:password_change` | GET, POST | sign in | sign in | rules | refused | yes | yes | yes | yes |
+| Password changed | `admin:password_change_done` | GET | sign in | sign in | rules | refused | yes | yes | yes | yes |
+| Password changed | `admin:password_change_done` | POST | sign in | sign in | rules | refused | wrong method | wrong method | wrong method | wrong method |
+| Search box helper | `admin:autocomplete` | GET | sign in | sign in | rules | refused | refused | refused | refused | refused |
+| Search box helper | `admin:autocomplete` | POST | sign in | sign in | rules | refused | wrong method | wrong method | wrong method | wrong method |
+| Admin translations | `admin:jsi18n` | GET | sign in | sign in | rules | refused | yes | yes | yes | yes |
+| Admin translations | `admin:jsi18n` | POST | sign in | sign in | rules | refused | wrong method | wrong method | wrong method | wrong method |
+| "View on site" | `admin:view_on_site` | GET, POST | sign in | sign in | rules | refused | hidden | hidden | yes | yes |
+| Staff hub section | `admin:app_list` (hub) | GET, POST | sign in | sign in | rules | refused | hidden | yes | yes | yes |
+| Audit log section | `admin:app_list` (admin) | GET, POST | sign in | sign in | rules | refused | hidden | hidden | yes | yes |
+| Permission roles section | `admin:app_list` (auth) | GET, POST | sign in | sign in | rules | refused | hidden | hidden | hidden | yes |
+| Library section | `admin:app_list` (library) | GET, POST | sign in | sign in | rules | refused | hidden | hidden | hidden | yes |
+| Any other admin address | `admin:catch_all` | GET, POST | sign in | sign in | rules | refused | hidden | hidden | hidden | hidden |
 
-- "No staff status" is checked for the colleague, member, author, publisher, editor and org admin, one by one.
+- "No staff status" is checked for the colleague, member, author and editor, one by one.
 - The search box helper only answers the admin's own search boxes, which ask with more details.
+- "View on site" opens the item in the hub, so it answers as the item does: here the poll in the private group.
+- The publisher's admin home is empty: the Communications role in README.md has no admin rights.
 
-Each admin section, for the moderator and the superuser. Everyone else is refused, as on the admin home. "Open" is the
-page of one record (and, for people, the password page).
+Each admin section, for everyone with staff status. "Open" is the page of one record (and, for people, the password page).
+The moderator and the superuser have a row for every section. The publisher and the org admin have a row only where they get
+in, and are refused everywhere else. People without staff status are refused, as on the admin home.
 
 | Section | Address | List | Add | Open | History | Delete |
 |---|---|---|---|---|---|---|
-| Posts | `hub.post` (moderator) | yes | refused | yes | yes | yes |
-| Posts | `hub.post` (superuser) | yes | yes | yes | yes | yes |
-| Comments | `hub.comment` (moderator) | yes | refused | yes | yes | yes |
-| Comments | `hub.comment` (superuser) | yes | yes | yes | yes | yes |
-| Reports | `hub.report` (moderator) | yes | refused | yes | yes | yes |
-| Reports | `hub.report` (superuser) | yes | refused | yes | yes | yes |
+| Posts | `hub.post` (moderator) | yes | refused | yes | yes | refused |
+| Posts | `hub.post` (superuser) | yes | yes | yes | yes | refused |
+| Comments | `hub.comment` (moderator) | yes | refused | yes | yes | refused |
+| Comments | `hub.comment` (superuser) | yes | yes | yes | yes | refused |
+| Reports | `hub.report` (moderator) | yes | refused | yes | yes | refused |
+| Reports | `hub.report` (superuser) | yes | refused | yes | yes | refused |
 | Audit log | `admin.logentry` (moderator) | yes | refused | view only | yes | refused |
 | Audit log | `admin.logentry` (superuser) | yes | refused | view only | yes | refused |
 | People | `hub.user` (moderator) | refused | refused | refused | refused | refused |
 | People | `hub.user` (superuser) | yes | yes | yes | yes | yes |
 | Permission roles | `auth.group` (moderator) | refused | refused | refused | refused | refused |
 | Permission roles | `auth.group` (superuser) | yes | yes | yes | yes | yes |
+| Groups and units | `hub.community` (org admin) | yes | refused | yes | yes | refused |
 | Groups and units | `hub.community` (moderator) | refused | refused | refused | refused | refused |
-| Groups and units | `hub.community` (superuser) | yes | yes | yes | yes | yes |
+| Groups and units | `hub.community` (superuser) | yes | yes | yes | yes | view only |
 | Events | `hub.event` (moderator) | refused | refused | refused | refused | refused |
 | Events | `hub.event` (superuser) | yes | yes | yes | yes | yes |
 | What's new | `hub.featurenote` (moderator) | refused | refused | refused | refused | refused |
@@ -387,6 +404,19 @@ page of one record (and, for people, the password page).
 | Articles | `library.article` (moderator) | refused | refused | refused | refused | refused |
 | Articles | `library.article` (superuser) | yes | yes | yes | yes | yes |
 
+- **Posts, comments and reports have no Delete page, for a superuser too.** Django's delete is for good at once, and would
+  skip the 30 days the hub keeps deleted items and the hold while a report is open (README.md, "Evidence"). Moderators use
+  **Delete selected (removed for good after 30 days)** or **Hide selected from staff** in the list instead. A closed report
+  goes with what it is about; an open one is never deleted.
+- **Decided: while an open report keeps a post or comment, the superuser can't delete the group, person or event it belongs
+  to.** The delete page opens and lists what is in the way, but deleting is refused ("view only" above: the group holds the
+  reported poll). Close the report first. Without an open report, deleting a group, person or event here removes its posts
+  and comments for good at once, as Django does. Only the superuser can.
+- **Moderators can't change who wrote a post or comment, what it says, when, or where it went.** For anyone but a superuser,
+  these are read only: a post's author, group, audiences, title, words, kind, date, event and mentions, and a comment's
+  author, post, words and date. Moderators hide, restore and pin. The test saves a post and a comment as a moderator with
+  another author and group, and checks that only "hidden" changed.
+- A moderator never sees a report about themselves, or about something they wrote: another moderator deals with it.
 - Reports only come from staff using the Report links, so nobody adds one here. The audit log can't be changed or deleted,
   even by a superuser.
 
@@ -399,9 +429,14 @@ Fixed:
    redirects"). They are now refused straight away (`config/urls.py`).
 2. **A private group's page showed its posts to org admins who aren't in it**, while the posts themselves answered "not
    found" to them, with broken photos. The page now lists only posts the person may open (`hub/views.py`, the group page).
-3. **The must-read readers list answered "refused" instead of "not found"** to people the news wasn't sent to, and showed a
-   publisher outside a private group who is in it. The security test (docs/security/PENTEST-REPORT.md) found and fixed
-   this first; the same two lines are here so this table holds on its own (`hub/news.py`).
+3. **The must-read readers list answered "refused" instead of "not found"** to people the news wasn't sent to. The security
+   test (docs/security/PENTEST-REPORT.md) found and fixed this first; the same lines are here so this table holds on its own.
+   **It also showed who is in a private group to a publisher outside it,** even the one who wrote the news. Now anyone who
+   can't see a private group the news went to gets "not found" (`hub/news.py`).
+4. **The admin's Delete removed posts, comments and reports for good,** skipping the 30-day keep and the hold for open
+   reports. They have no Delete page now (`hub/admin.py`).
+5. **A moderator could rewrite a post in the admin:** give it another author, or move a private group's post to everyone,
+   so colleagues outside the group could read it. Those fields are now read only for anyone but a superuser (`hub/admin.py`).
 
 Checked and left as they are:
 
@@ -409,9 +444,6 @@ Checked and left as they are:
   number is in use, which is no secret as numbers are counted up, and nothing about the item is shown.
 - **A new starter's browser can't fetch the push script** until they accept the house rules. Harmless: push can't be
   switched on before then anyway.
-- **Moderators can delete posts and comments for good in the admin**, because README.md gives them the delete right. The
-  hub's own Delete keeps items for 30 days in case HR needs them; the admin's doesn't. To keep everything for 30 days, untick
-  "Can delete post" and "Can delete comment" for Moderators and use "Hide" instead.
 
 ## Changing who can do what
 

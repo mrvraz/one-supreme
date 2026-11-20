@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import NewsForm
-from .models import Post, PostRead, matching
+from .models import Community, Post, PostRead, matching
 from .publishing import announce, post_audience, set_mentions
 from .security import LIMIT_MESSAGE, audit, over_limit
 from .views import paginate
@@ -109,6 +109,8 @@ def news_readers(request, pk):
     post = get_object_or_404(Post.objects.visible().viewable_by(request.user), pk=pk, kind=Post.NEWS)
     if post.author_id != request.user.pk and not can_publish(request.user):
         raise PermissionDenied
+    if any(not g.can_view(request.user) for g in post.audiences.filter(kind=Community.GROUP)):
+        raise Http404  # units are left out: Communications send news to any unit and still follow it up
     if not post.requires_ack:
         raise Http404  # ordinary news only shows totals: nobody is watched for simply reading
     confirmed = {read.user_id: read.acknowledged_at for read in post.reads.exclude(acknowledged_at=None)}
