@@ -33,7 +33,7 @@ The screens follow the Hiveshire **Daylight** (light) and **Daylight Dark** look
 | Privacy | Photos are re-encoded and videos are copied without metadata, so GPS location and device details are stripped. Uploads are only served to signed-in staff who may see them. |
 | Data protection | Everyone accepts the house rules (with a data notice) on first sign-in, and again when they change. Anyone can download their own data, from every section, as a zip. Old alerts, deleted content and (optionally) old posts, chat messages and leavers' accounts are removed automatically. |
 | Abuse limits | Per-person limits on posts, uploads, comments, reports, events and groups; request limits in nginx; uploads pause and IT is emailed before the disk fills. |
-| Leavers | Signed out within 15 minutes of IT disabling them, and switched off in the hub by a nightly check against Entra ID. Accounts are tied to Microsoft's permanent user ID, so someone whose email changes keeps their account. |
+| Leavers | Switched off in the hub, and so signed out on every device, within 15 minutes of IT disabling them, by a check against Entra ID every 15 minutes. Accounts are tied to Microsoft's permanent user ID, so someone whose email changes keeps their account. |
 | Security log | Sign-ins, failed sign-ins, deletions, moderation, limits hit, exports and deactivations are written as JSON lines for Supreme's security monitoring (SIEM). |
 
 `docs/FEATURE-PLAN.md` compares these features with the app Supreme uses today.
@@ -67,7 +67,7 @@ Scheduled jobs (the `scheduler` service runs `python manage.py scheduler`; times
 | `tick` | every minute | Publishes scheduled posts and news when their time comes, sends event reminders, and sends push notifications. |
 | `check_disk` | hourly | Emails `ADMIN_EMAILS` when the disk is over 85% full. Uploads pause at 95%. |
 | `send_digests` | daily, about 05:00 | The email summary of unread alerts, with only the kinds each person wants by email. Skipped while someone has Do not disturb on. |
-| `sync_directory` | daily | Switches off accounts removed or disabled in Entra ID. Refuses to switch off more than a fifth of accounts at once, in case of a misconfiguration, and emails `ADMIN_EMAILS` whenever it fails. `--dry-run` shows who would go. |
+| `sync_directory` | every 15 minutes | Switches off accounts removed or disabled in Entra ID. Refuses to switch off more than a fifth of accounts at once, in case of a misconfiguration. Every failure is logged; the 05:00 run also emails `ADMIN_EMAILS`. `--dry-run` shows who would go. |
 | `purge` | daily | Removes deleted content after 30 days (unless under an open report), alerts after 90 days, posts after `POST_RETENTION_DAYS`, chat messages after `CHAT_RETENTION_DAYS`, and leavers' accounts `LEAVER_RETENTION_DAYS` after the day they were switched off. |
 
 ## Run it on your computer
@@ -170,6 +170,7 @@ docker run --rm -v staff-hub_media:/data -v "$PWD":/backup alpine tar czf /backu
 ## Security notes
 
 - Every page requires sign-in (Django's `LoginRequiredMiddleware`); only the sign-in page, the SSO callback, the home-screen icon/manifest and the push service worker are public.
+- How sign-in, sessions, leavers and the break-glass account work, and the tests that show it: `docs/security/IDENTITY.md`.
 - A Content Security Policy only allows scripts from the hub itself and forbids framing; the browser also gets no access to camera, microphone or location.
 - Uploaded files are served by nginx only after the app has checked the session and that the person may see them (`X-Accel-Redirect`); the files folder is not public.
 - Uploads are checked by their content, not the file name. Photos are re-encoded and videos are re-packaged without metadata; anything ffmpeg or the image library can't read is rejected.
