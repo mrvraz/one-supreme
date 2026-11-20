@@ -833,15 +833,14 @@ def community_detail(request, slug):
     elif request.method == "POST":
         raise PermissionDenied
     posts = post_queryset().filter(community=group)
-    pinned = list(posts.filter(pinned_at__isnull=False).order_by("-pinned_at")[:5])
+    pinned = decorate(posts.filter(pinned_at__isnull=False).order_by("-pinned_at")[:5], user)
     page = paginate(request, posts.exclude(pk__in=[p.pk for p in pinned]))
-    pinned, cards = shown_cards(pinned, page, user)
     now = timezone.now()
     context = base | {
         "form": form,
-        "pinned": pinned,
+        "pinned": pinned if page.number == 1 else [],
         "page": page,
-        "posts": cards,
+        "posts": decorate(page.object_list, user),
         "events": group.events.filter(Q(starts_at__gte=now) | Q(ends_at__gte=now))[:5],
         "members": group.members.all()[:12],
     }

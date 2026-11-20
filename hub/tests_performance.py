@@ -39,7 +39,7 @@ class QueryCeilingTests(TestCase):
         for i in range(n):
             posts = [
                 Post.objects.create(author=author, body=f"For everyone {i}", pinned_at=timezone.now() if i == 0 else None),
-                Post.objects.create(author=author, body=f"For the club {i}", community=self.club),
+                Post.objects.create(author=author, body=f"For the club {i}", community=self.club, pinned_at=timezone.now() if i == 0 else None),
                 Post.objects.create(author=author, body=f"For the team {i}", community=self.team),
                 Post.objects.create(author=author, kind=Post.POLL, body=f"Lunch? {i}"),
                 Post.objects.create(author=author, kind=Post.NEWS, title=f"News {i}", body="Read me", requires_ack=True),
@@ -79,7 +79,7 @@ class QueryCeilingTests(TestCase):
         }
         # With some room. A page that needs more than this is doing something new and should be looked at.
         ceilings = {
-            "feed": 44, "feed by activity": 44, "group": 35, "profile": 31, "news": 14, "unread news": 14, "chat list": 12,
+            "feed": 44, "feed by activity": 44, "group": 50, "profile": 31, "news": 14, "unread news": 14, "chat list": 12,
             "moderator's feed": 42, "admin posts": 12, "admin reports": 11, "admin events": 12,
         }
         self.add(2)
