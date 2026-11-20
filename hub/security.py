@@ -69,7 +69,8 @@ def _signed_out(sender, request, user, **kwargs):
 
 @receiver(user_login_failed)
 def _sign_in_failed(sender, credentials, request=None, **kwargs):
-    audit("sign_in_failed", request, level=logging.WARNING, username=credentials.get("username", ""))
+    if "username" in credentials:  # the password form; hub/auth.py logs a refused single sign-on, once
+        audit("sign_in_failed", request, level=logging.WARNING, username=credentials["username"])
 
 
 # --- Activity limits ---------------------------------------------------------------

@@ -7,11 +7,11 @@ from .models import Article, Document
 
 
 def media_guard(user, name):
-    """May this person download this library file? Returns the name to save it under, or False."""
+    """May this person download this library file? Returns its download name and id, or False."""
     doc = Document.objects.filter(file=name).select_related("community").first()
     if doc is None or (doc.community and not doc.community.can_view(user)):
         return False
-    return download_name(doc.original_name) or os.path.basename(name)
+    return {"name": download_name(doc.original_name) or os.path.basename(name), "document_id": doc.pk}
 
 
 def search_files(user, q, limit):

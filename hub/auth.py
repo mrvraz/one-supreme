@@ -44,6 +44,9 @@ class EmployeeOIDCBackend(OIDCAuthenticationBackend):
         return self.update_user(super().create_user(claims), claims)
 
     def update_user(self, user, claims):
+        if not user.is_active:  # switched off in the admin: the sign-in view refuses it, this leaves a trace
+            audit("sign_in_rejected", getattr(self, "request", None), level=logging.WARNING, email=user.email,
+                  reason="account switched off")
         first, last = claims.get("given_name", ""), claims.get("family_name", "")
         if not (first or last) and claims.get("name"):
             first, _, last = claims["name"].partition(" ")

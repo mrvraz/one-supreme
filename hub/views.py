@@ -15,6 +15,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_not_required
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, SuspiciousFileOperation
 from django.core.files.storage import default_storage
 from django.core.paginator import Paginator
@@ -139,8 +140,9 @@ plugins.MEDIA_GUARDS.update(
 def media(request, path):
     """Uploaded files, for signed-in staff only, and only the files each person may see.
 
-    The top folder of the file picks a guard from plugins.MEDIA_GUARDS. A guard returns False (no),
-    True (yes) or a file name to offer as a download. Folders without a guard are never served.
+    The top folder of the file picks a guard from plugins.MEDIA_GUARDS. A guard returns False (no), True (yes)
+    or, for a download, {"name": the name to save it as, ...details for its file_downloaded log line}.
+    Folders without a guard are never served.
     """
     try:
         full_path = safe_join(settings.MEDIA_ROOT, path)
@@ -154,6 +156,7 @@ def media(request, path):
     allowed = guard(request.user, name) if guard else False
     if not allowed:
         raise Http404
+    download = allowed if isinstance(allowed, dict) else {}
     content_type = mimetypes.guess_type(full_path)[0] or "application/octet-stream"
     if settings.X_ACCEL_MEDIA:
         response = HttpResponse(content_type=content_type)
@@ -162,10 +165,13 @@ def media(request, path):
         response = FileResponse(open(full_path, "rb"), content_type=content_type)
     # Only pictures, video and sound open in the browser. Everything else downloads, so a document can never run as a page.
     shown_inline = content_type.split("/")[0] in ("image", "video", "audio") and content_type != "image/svg+xml"
-    if not shown_inline or isinstance(allowed, str):
-        filename = allowed if isinstance(allowed, str) else os.path.basename(name)
-        response["Content-Disposition"] = content_disposition_header(as_attachment=not shown_inline, filename=filename)
-        audit("file_downloaded", request, file=name)  # files and attachments, not the photos shown in the feed
+    if not shown_inline or download:
+        download = {"name": os.path.basename(name), **download}
+        response["Content-Disposition"] = content_disposition_header(as_attachment=not shown_inline, filename=download["name"])
+        # Library files, not the photos and videos shown in posts and chats. A video or a big PDF arrives in many
+        # range requests, and people reopen files, so each file is logged and counted once in 24 hours per person.
+        if cache.add(f"downloaded:{request.user.pk}:{name}", True, 24 * 60 * 60):
+            audit("file_downloaded", request, file=name, **download)
     response["Cache-Control"] = "private, max-age=86400"
     return response
 

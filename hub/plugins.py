@@ -3,8 +3,8 @@
 Each app fills these from its AppConfig.ready(), so `hub` never has to import them.
 """
 
-# Top folder under MEDIA_ROOT -> function(user, name) -> bool. May this person open this uploaded file?
-# A folder with no guard is never served.
+# Top folder under MEDIA_ROOT -> function(user, name). May this person open this uploaded file? False, True, or for
+# a download {"name": the name to save it as, ...details for the log} (hub.views.media). No guard: never served.
 MEDIA_GUARDS = {}
 
 # function(user, q, limit) -> (section label, [(title, url, subtitle), ...]) for the search page.

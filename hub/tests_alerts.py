@@ -1,24 +1,29 @@
 """Security alerts (hub/alerts.py) and the events that feed them. docs/operations/SECURITY-ALERTS.md lists them."""
 
+import io
+import json
 import logging
 import os
 import re
 import shutil
 import tempfile
-import time
+import uuid
 from unittest import mock
 
 from django.conf import settings
+from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group, Permission
-from django.core import mail
+from django.core import checks, mail
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
+from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 from library.models import Document
 
 from .alerts import RULES
+from .auth import EmployeeOIDCBackend
 from .security import audit
 from .tests import make_user
 
@@ -34,6 +39,10 @@ class SecurityAlertTests(TestCase):
 
     def setUp(self):
         cache.clear()  # the counts live in the cache, which outlasts a test
+        clock = mock.patch("hub.alerts.time")
+        self.clock = clock.start().time
+        self.clock.return_value = 1_800_000_000  # the start of a window, so no test straddles two
+        self.addCleanup(clock.stop)
         self.alice = make_user("alice")
         self.bob = make_user("bob")
 
@@ -71,8 +80,32 @@ class SecurityAlertTests(TestCase):
         self.assertEqual(len(mail.outbox), 7)
         self.assertEqual(mail.outbox[0].subject, "Staff hub: admin rights changed")
         self.assertEqual(mail.outbox[0].to, ["it@example.com"])
-        self.assertIn("target: bob@example.com", mail.outbox[0].body)
+        self.assertIn('target: "bob@example.com"', mail.outbox[0].body)
         self.assertIn('see "Admin rights changed" in docs/operations/SECURITY-ALERTS.md', mail.outbox[0].body)
+
+    def test_waking_a_dormant_admin_or_giving_it_a_password_is_an_alert(self):
+        root = make_user("root", is_superuser=True, is_active=False)
+        carol = make_user("carol", is_active=False)
+        carol.groups.add(Group.objects.create(name="Moderators"))
+        with self.assertLogs("hub.security", "WARNING") as logs, self.captureOnCommitCallbacks(execute=True):
+            root.is_active = True
+            root.save()
+            root.set_password("pw2")
+            root.save()
+            carol.is_active = True
+            carol.save(update_fields=["is_active"])
+            self.bob.is_active = False  # an ordinary account: switching it off and on, or a new password, is no alert
+            self.bob.save()
+            self.bob.is_active = True
+            self.bob.set_password("pw2")
+            self.bob.save()
+        changes = [(e["target"], e["change"]) for e in self.events(logs, "admin_rights_changed")]
+        self.assertEqual(changes, [
+            ("root@example.com", "admin account switched back on"),
+            ("root@example.com", "admin account given a new password"),
+            ("carol@example.com", "admin account switched back on"),
+        ])
+        self.assertEqual(len(mail.outbox), 3)
 
     def test_ordinary_saves_and_undone_changes_send_nothing(self):
         with self.assertNoLogs("hub.security", "WARNING"), self.captureOnCommitCallbacks(execute=True) as done:
@@ -92,15 +125,47 @@ class SecurityAlertTests(TestCase):
     def test_many_failed_sign_ins_send_one_email_per_window(self):
         self.repeat(9, "sign_in_failed", username="breakglass")
         self.assertEqual(mail.outbox, [])
-        self.repeat(1, "sign_in_rejected", email="guest@partner.com")  # refused single sign-ons count too
+        self.repeat(1, "sign_in_rejected", email="guest@partner.com\nevent: nothing to see")  # refused SSO counts too
         self.assertEqual([m.subject for m in mail.outbox], ["Staff hub: many failed sign-ins"])
         self.assertIn("10 times within 15 minutes.", mail.outbox[0].body)
-        self.assertIn("email: guest@partner.com", mail.outbox[0].body)
+        # Typed text stays inside its own line, so it can't pass for a line of the email.
+        self.assertIn('email: "guest@partner.com\\nevent: nothing to see"', mail.outbox[0].body)
+        self.assertNotIn("\nevent: nothing to see", mail.outbox[0].body)
         self.repeat(20, "sign_in_failed", username="breakglass")
         self.assertEqual(len(mail.outbox), 1)  # the rest of the attack doesn't flood the mailbox
-        with mock.patch("hub.alerts.time.time", return_value=time.time() + 16 * 60):
-            self.repeat(10, "sign_in_failed", username="breakglass")
+        self.clock.return_value += 16 * 60
+        self.repeat(10, "sign_in_failed", username="breakglass")
         self.assertEqual(len(mail.outbox), 2)  # a new window, a new email
+
+    @override_settings(
+        AUTHENTICATION_BACKENDS=["hub.auth.EmployeeOIDCBackend"], ALLOWED_EMAIL_DOMAINS=["example.com"],
+        OIDC_OP_TOKEN_ENDPOINT="https://sso.invalid/token", OIDC_OP_USER_ENDPOINT="https://sso.invalid/userinfo",
+        OIDC_RP_CLIENT_ID="hub", OIDC_RP_CLIENT_SECRET="", OIDC_RP_SIGN_ALGO="HS256",
+    )
+    def test_each_refused_single_sign_on_counts_once(self):
+        request = RequestFactory().get("/oidc/callback/", {"code": "c", "state": "s"})
+        request.session = {}
+
+        def sign_in(email):  # Microsoft's side is faked; the hub's backend and Django's authenticate() are real
+            with mock.patch.object(OIDCAuthenticationBackend, "get_userinfo", return_value={"email": email}):
+                return authenticate(request, nonce=None, code_verifier=None)
+
+        token = {"id_token": "i", "access_token": "a"}
+        with (
+            mock.patch.object(EmployeeOIDCBackend, "get_token", return_value=token),
+            mock.patch.object(EmployeeOIDCBackend, "verify_token", return_value={"oid": "oid-1"}),
+            self.assertLogs("hub.security", "WARNING") as logs,
+            self.assertLogs("mozilla_django_oidc", "WARNING"),  # its own "Claims verification failed" lines
+        ):
+            for _ in range(9):
+                self.assertIsNone(sign_in("guest@partner.com"))
+            self.assertEqual(mail.outbox, [])
+            self.bob.is_active = False
+            self.bob.save()
+            self.assertEqual(sign_in("bob@example.com"), self.bob)  # the callback view then turns him away
+        self.assertEqual([r.getMessage() for r in logs.records], ["sign_in_rejected"] * 10 + ["security_alert"])
+        self.assertEqual(logs.records[9].details["reason"], "account switched off")
+        self.assertEqual([m.subject for m in mail.outbox], ["Staff hub: many failed sign-ins"])
 
     def test_one_person_hitting_the_limits_again_and_again(self):
         self.repeat(4, "rate_limited", user=self.alice, limit="post")
@@ -109,25 +174,29 @@ class SecurityAlertTests(TestCase):
         self.assertEqual(mail.outbox, [])
         self.repeat(1, "rate_limited", user=self.alice, limit="comment")
         self.assertEqual([m.subject for m in mail.outbox], ["Staff hub: one person keeps hitting the limits"])
-        self.assertIn("5 times within an hour, all by alice@example.com.", mail.outbox[0].body)
+        self.assertIn('5 times within an hour, all by "alice@example.com".', mail.outbox[0].body)
 
-    def test_downloads_are_logged_and_a_hundred_in_a_day_is_an_alert(self):
-        doc = Document.objects.create(
-            title="Pay bands", file=SimpleUploadedFile("pay.pdf", b"%PDF-1.7\n%%EOF"), original_name="pay.pdf",
-            size=14, uploaded_by=self.bob,
+    def test_downloads_are_logged_once_per_file_by_name_and_id_and_a_hundred_in_a_day_is_an_alert(self):
+        doc = Document.objects.create(  # stored under a random name, as library/files.py does
+            title="Pay bands", file=SimpleUploadedFile(uuid.uuid4().hex + ".pdf", b"%PDF-1.7\n%%EOF"),
+            original_name="Pay bands 2026.pdf", size=14, uploaded_by=self.bob,
         )
         os.makedirs(os.path.join(TEMP_MEDIA, "avatars"), exist_ok=True)
         with open(os.path.join(TEMP_MEDIA, "avatars", "bob.png"), "wb") as fh:
             fh.write(b"\x89PNG")
+        # Through the real "security" handler, with whatever filters settings.LOGGING gives it (log redaction too).
+        handler = next(h for h in logging.getLogger("hub.security").handlers if h.name == "security")
+        self.addCleanup(handler.setStream, handler.setStream(io.StringIO()))
         self.client.force_login(self.alice)
-        with self.assertLogs("hub.security", "INFO") as logs:
-            self.assertEqual(self.client.get(doc.file.url).status_code, 200)
-            self.assertEqual(self.client.get("/media/avatars/bob.png").status_code, 200)  # shown, not downloaded
-        downloads = self.events(logs, "file_downloaded")
-        self.assertEqual([(d["file"], d["user"]) for d in downloads], [(doc.file.name, "alice@example.com")])
-        self.repeat(98, "file_downloaded", user=self.alice, file=doc.file.name)
+        self.assertEqual(self.client.get(doc.file.url).status_code, 200)
+        self.assertEqual(self.client.get(doc.file.url, HTTP_RANGE="bytes=1000-").status_code, 200)  # the same file
+        self.assertEqual(self.client.get("/media/avatars/bob.png").status_code, 200)  # shown, not downloaded
+        lines = [json.loads(line) for line in handler.stream.getvalue().splitlines()]
+        downloads = [(e["name"], e["document_id"], e["user"]) for e in lines if e["event"] == "file_downloaded"]
+        self.assertEqual(downloads, [("Pay bands 2026.pdf", doc.pk, "alice@example.com")])
+        self.repeat(98, "file_downloaded", user=self.alice, name=doc.original_name)
         self.assertEqual(mail.outbox, [])
-        self.repeat(1, "file_downloaded", user=self.alice, file=doc.file.name)
+        self.repeat(1, "file_downloaded", user=self.alice, name=doc.original_name)
         self.assertEqual([m.subject for m in mail.outbox], ["Staff hub: one person is downloading many files"])
 
     def test_repeated_data_exports(self):
@@ -135,6 +204,19 @@ class SecurityAlertTests(TestCase):
         self.assertEqual(mail.outbox, [])
         self.repeat(1, "data_exported", user=self.alice)
         self.assertEqual([m.subject for m in mail.outbox], ["Staff hub: one person keeps exporting their data"])
+
+    def test_two_events_at_the_same_moment_send_one_email(self):
+        with mock.patch.object(cache, "get", return_value=2):  # both read the count before either wrote it
+            self.repeat(2, "data_exported", user=self.alice)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_the_deploy_check_says_when_alerts_reach_nobody(self):
+        def found():
+            return [m.id for m in checks.run_checks(tags=[checks.Tags.security], include_deployment_checks=True)]
+
+        self.assertNotIn("hub.I001", found())
+        with override_settings(ADMINS=[]):
+            self.assertIn("hub.I001", found())
 
     def test_every_alert_is_in_the_alerts_document_and_nothing_else_is(self):
         doc = (settings.BASE_DIR / "docs/operations/SECURITY-ALERTS.md").read_text(encoding="utf-8")
