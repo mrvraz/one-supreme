@@ -6,6 +6,8 @@ from django.urls import include, path
 from django.views.generic import RedirectView
 from mozilla_django_oidc import views as oidc_views
 
+from hub.auth import CallbackView
+
 admin.site.site_header = f"{settings.SITE_NAME} admin"
 admin.site.site_title = f"{settings.SITE_NAME} admin"
 admin.site.index_title = "Moderation and settings"
@@ -21,7 +23,7 @@ urlpatterns = [
     ),
     path(
         "oidc/callback/",
-        login_not_required(oidc_views.OIDCAuthenticationCallbackView.as_view()),
+        login_not_required(CallbackView.as_view()),
         name="oidc_authentication_callback",
     ),
     path("oidc/logout/", auth_views.LogoutView.as_view(), name="oidc_logout"),

@@ -8,6 +8,7 @@ from urllib.parse import quote
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
+from django.core.mail import mail_admins
 from django.dispatch import receiver
 from django.shortcuts import redirect
 from django.urls import reverse
@@ -56,6 +57,14 @@ def record_change(user, obj, message, deletion=False):
 @receiver(user_logged_in)
 def _signed_in(sender, request, user, **kwargs):
     audit("sign_in", request, user)
+    if settings.OIDC_ENABLED and getattr(user, "backend", "") == "django.contrib.auth.backends.ModelBackend":
+        # A password sign-in while single sign-on is on: the break-glass account, which skips Entra's MFA.
+        mail_admins(
+            "Staff hub: break-glass sign-in",
+            f"{user.email} signed in with a password from {client_ip(request)}. If nobody planned this, set "
+            "ALLOW_PASSWORD_LOGIN=0, restart the hub and change that account's password.",
+            fail_silently=True,  # break-glass is for when things are broken: a dead mail server must not block it
+        )
 
 
 @receiver(user_logged_out)

@@ -515,14 +515,16 @@ class FeatureTests(TestCase):
 
         with (
             mock.patch.object(scheduler, "datetime", **{"now.side_effect": clock}),
-            mock.patch.object(scheduler, "run", side_effect=lambda name: ran.append(name)),
+            mock.patch.object(scheduler, "run", side_effect=lambda *job: ran.append(" ".join(job))),
             mock.patch("time.sleep", side_effect=[None] * (len(clock) - 1) + [Stop]),
             self.assertRaises(Stop),
         ):
             call_command("scheduler", stdout=StringIO())
         self.assertEqual(ran.count("tick"), 5)
         self.assertEqual(ran.count("check_disk"), 3)  # once in each of the hours 04, 05 and 06
-        self.assertEqual([job for job in ran if job not in ("tick", "check_disk")], ["send_digests", "sync_directory", "purge"])
+        self.assertEqual(ran.count("sync_directory --no-email"), 3)  # the quarter-hours 04:45, 05:00 and 06:00
+        daily = [job for job in ran if job not in ("tick", "check_disk", "sync_directory --no-email")]
+        self.assertEqual(daily, ["send_digests", "sync_directory", "purge"])
 
     def test_a_photo_with_too_many_pixels_is_refused_before_it_is_unpacked(self):
         from .media import process_upload

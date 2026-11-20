@@ -1,6 +1,7 @@
 """Runs the hub's background jobs, forever. Started by the `scheduler` service in docker-compose.
 
 Every minute: scheduled posts, event reminders and push notifications ("tick").
+Every 15 minutes: the leaver check, quietly (a failure is logged; the daily run at 05:00 also emails it).
 Every hour: the disk-space check. Every day at 05:00 UTC: the email digest, the leaver check and the clean-up.
 """
 
@@ -29,10 +30,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Scheduler started.")
-        last_hour = last_day = None
+        last_hour = last_day = last_quarter = None
         while True:
             now = datetime.now(timezone.utc)
             run("tick")
+            # Leavers are switched off, and so signed out everywhere, within 15 minutes of leaving the directory.
+            if (now.hour, now.minute // 15) != last_quarter:
+                last_quarter = (now.hour, now.minute // 15)
+                run("sync_directory", "--no-email")
             # Keyed on the hour having changed, not on minute 0: a slow tick at 04:59 must not skip a whole day.
             if now.hour != last_hour:
                 last_hour = now.hour

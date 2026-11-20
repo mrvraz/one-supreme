@@ -130,6 +130,8 @@ OIDC_RP_CLIENT_ID = env("OIDC_RP_CLIENT_ID")
 OIDC_ENABLED = bool(OIDC_RP_CLIENT_ID)
 ALLOW_PASSWORD_LOGIN = env_bool("ALLOW_PASSWORD_LOGIN")
 ALLOWED_EMAIL_DOMAINS = [d.lower() for d in env_list("ALLOWED_EMAIL_DOMAINS")]
+# Everyone signs in again a day after they last did (hub/auth.py). SESSION_COOKIE_AGE is the idle limit.
+MIDDLEWARE.append("hub.auth.session_limit")
 
 AUTHENTICATION_BACKENDS = []
 if OIDC_ENABLED:
