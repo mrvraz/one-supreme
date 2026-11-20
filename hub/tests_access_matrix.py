@@ -354,7 +354,8 @@ class AccessMatrix(TestCase):
                         expected, got = self.cell(key, method, column), self.ask(who, method, url, name, follow)
                         if got != expected:
                             wrong.append(f"{key} {method} {column}: table says {expected!r}, page gives {got!r}")
-        self.assertEqual(wrong, [], "\n" + "\n".join(wrong))
+        if wrong:
+            self.fail(f"{len(wrong)} answers differ from {TABLE.name}:\n" + "\n".join(wrong))
 
     def site(self, namespaced):
         """The hub's own addresses (namespaced=False), or those of chat, library, journeys and jobs."""
@@ -366,10 +367,10 @@ class PagesForEveryone(AccessMatrix):
         sections = {model._meta.label_lower for model in admin.site._registry}
         for name, route in addresses():
             for key in self.keys(name):
-                self.assertIn(key, self.table, f"{route} has no row in {TABLE.name}: decide who may open it")
+                self.assertTrue(key in self.table, f"{route} {key} has no row in {TABLE.name}: decide who may open it")
         for label in sections:
             for who in ("moderator", "superuser"):
-                self.assertIn((label, who), self.table, f"The admin section {label} has no row for the {who}")
+                self.assertTrue((label, who) in self.table, f"The admin section {label} has no row for the {who}")
         known = {name for name, _route in addresses()} | sections
         self.assertEqual({name for name, _case in self.table} - known, set(), f"Rows in {TABLE.name} for addresses that are gone")
         self.assertEqual({case for name, case in CASES if name == "media"}, set(plugins.MEDIA_GUARDS), "One media row per folder")
@@ -398,7 +399,8 @@ class PagesForEveryone(AccessMatrix):
                         got = self.ask(who, method, url, name)
                         if got not in allowed:
                             wrong.append(f"{url} {method} {column}: expected {' or '.join(sorted(allowed))}, page gives {got!r}")
-        self.assertEqual(wrong, [], "\n" + "\n".join(wrong))
+        if wrong:
+            self.fail(f"{len(wrong)} answers differ from {TABLE.name}:\n" + "\n".join(wrong))
 
     def test_a_private_groups_page_lists_its_posts_only_for_those_who_may_open_them(self):
         page = reverse("community", args=[self.f.group.slug])
@@ -455,4 +457,5 @@ class AdminPages(AccessMatrix):
                     got = self.ask(who, method, url, follow=True)
                     if got != want:
                         wrong.append(f"{url} {method} {who}: expected {want!r}, page gives {got!r}")
-        self.assertEqual(wrong, [], "\n" + "\n".join(wrong))
+        if wrong:
+            self.fail(f"{len(wrong)} answers differ from {TABLE.name}:\n" + "\n".join(wrong))
