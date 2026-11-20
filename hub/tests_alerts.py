@@ -11,13 +11,13 @@ import uuid
 from unittest import mock
 
 from django.conf import settings
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import Group, Permission
 from django.core import checks, mail
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import Client, RequestFactory, TestCase, override_settings
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 
 from library.models import Document
@@ -107,6 +107,35 @@ class SecurityAlertTests(TestCase):
         ])
         self.assertEqual(len(mail.outbox), 3)
 
+    def test_deleting_an_admin_account_or_a_role_with_members_is_an_alert(self):
+        moderators = Group.objects.create(name="Moderators")
+        self.bob.groups.add(moderators)
+        empty = Group.objects.create(name="Editors")
+        root = make_user("root", is_superuser=True)
+        with self.assertLogs("hub.security", "WARNING") as logs, self.captureOnCommitCallbacks(execute=True):
+            self.bob.groups.add(moderators)  # already in it: nothing changed, no email
+            get_user_model().objects.filter(pk=root.pk).delete()  # as the admin's "Delete selected" does
+            moderators.delete()
+            empty.delete()  # nobody loses anything
+            self.alice.delete()  # an ordinary account
+        changes = [(e["target"], e["change"]) for e in self.events(logs, "admin_rights_changed")]
+        self.assertEqual(changes, [
+            ("root@example.com", "admin account deleted"),
+            ("Moderators", "role deleted (members: bob@example.com)"),
+        ])
+        self.assertEqual(len(mail.outbox), 2)
+
+    def test_the_playbooks_sign_out_step_ends_a_stolen_session(self):
+        self.client.force_login(self.bob)  # the attacker's copy of the session
+        self.assertEqual(self.client.get("/").status_code, 200)
+        self.bob.is_active = False  # INCIDENT-PLAYBOOKS.md, playbook 1, step 2
+        self.bob.save()
+        self.bob.set_unusable_password()
+        self.bob.save()
+        self.bob.is_active = True  # step 9, once the account is clean
+        self.bob.save()
+        self.assertRedirects(self.client.get("/"), "/login/?next=/", fetch_redirect_response=False)
+
     def test_ordinary_saves_and_undone_changes_send_nothing(self):
         with self.assertNoLogs("hub.security", "WARNING"), self.captureOnCommitCallbacks(execute=True) as done:
             self.bob.job_title = "Picker"
@@ -188,13 +217,19 @@ class SecurityAlertTests(TestCase):
         handler = next(h for h in logging.getLogger("hub.security").handlers if h.name == "security")
         self.addCleanup(handler.setStream, handler.setStream(io.StringIO()))
         self.client.force_login(self.alice)
+        thief = Client(REMOTE_ADDR="203.0.113.9")  # alice again, from another session and network address
+        thief.force_login(self.alice)
         self.assertEqual(self.client.get(doc.file.url).status_code, 200)
         self.assertEqual(self.client.get(doc.file.url, HTTP_RANGE="bytes=1000-").status_code, 200)  # the same file
         self.assertEqual(self.client.get("/media/avatars/bob.png").status_code, 200)  # shown, not downloaded
+        self.assertEqual(thief.get(doc.file.url, HTTP_RANGE="bytes=1-").status_code, 200)
         lines = [json.loads(line) for line in handler.stream.getvalue().splitlines()]
-        downloads = [(e["name"], e["document_id"], e["user"]) for e in lines if e["event"] == "file_downloaded"]
-        self.assertEqual(downloads, [("Pay bands 2026.pdf", doc.pk, "alice@example.com")])
-        self.repeat(98, "file_downloaded", user=self.alice, name=doc.original_name)
+        downloads = [(e["name"], e["document_id"], e["user"], e["ip"]) for e in lines if e["event"] == "file_downloaded"]
+        self.assertEqual(downloads, [
+            ("Pay bands 2026.pdf", doc.pk, "alice@example.com", "127.0.0.1"),
+            ("Pay bands 2026.pdf", doc.pk, "alice@example.com", "203.0.113.9"),
+        ])
+        self.repeat(97, "file_downloaded", user=self.alice, name=doc.original_name)
         self.assertEqual(mail.outbox, [])
         self.repeat(1, "file_downloaded", user=self.alice, name=doc.original_name)
         self.assertEqual([m.subject for m in mail.outbox], ["Staff hub: one person is downloading many files"])

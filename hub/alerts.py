@@ -13,7 +13,7 @@ from django.core import checks
 from django.core.cache import cache
 from django.core.mail import mail_admins
 from django.db import transaction
-from django.db.models.signals import m2m_changed, pre_save
+from django.db.models.signals import m2m_changed, pre_delete, pre_save
 from django.dispatch import receiver
 
 log = logging.getLogger("hub.security")
@@ -126,7 +126,23 @@ def _admin_flags_changed(sender, instance, update_fields=None, **kwargs):
             _rights_changed(instance, "admin account given a new password")
 
 
+# Deleting an account or a role drops its link rows without m2m_changed, so the rights it took away are caught here.
+@receiver(pre_delete, sender=settings.AUTH_USER_MODEL)
+def _admin_deleted(sender, instance, **kwargs):
+    if _has_rights(instance):
+        _rights_changed(instance, "admin account deleted")
+
+
+@receiver(pre_delete, sender="auth.Group")
+def _role_deleted(sender, instance, **kwargs):
+    members = ", ".join(map(_name, instance.user_set.all()))
+    if members:
+        _rights_changed(instance, f"role deleted (members: {members})")
+
+
 def _roles_changed(sender, instance, action, model, pk_set, **kwargs):
+    if pk_set == set():
+        return  # e.g. a role added again to someone who already has it: nothing changed
     if action in ("post_add", "post_remove", "post_clear"):
         changed = "all" if pk_set is None else ", ".join(map(_name, model.objects.filter(pk__in=pk_set)))
         _rights_changed(instance, f"{model._meta.verbose_name} {'added' if action == 'post_add' else 'removed'}: {changed}")

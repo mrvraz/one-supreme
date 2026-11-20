@@ -58,7 +58,7 @@ from .models import (
     notify,
 )
 from .publishing import announce, post_audience, set_mentions
-from .security import LIMIT_MESSAGE, audit, over_limit, record_change
+from .security import LIMIT_MESSAGE, audit, client_ip, over_limit, record_change
 
 # --- Sign-in and app shell -------------------------------------------------------
 
@@ -169,8 +169,10 @@ def media(request, path):
         download = {"name": os.path.basename(name), **download}
         response["Content-Disposition"] = content_disposition_header(as_attachment=not shown_inline, filename=download["name"])
         # Library files, not the photos and videos shown in posts and chats. A video or a big PDF arrives in many
-        # range requests, and people reopen files, so each file is logged and counted once in 24 hours per person.
-        if cache.add(f"downloaded:{request.user.pk}:{name}", True, 24 * 60 * 60):
+        # range requests, and people reopen files, so each file is logged and counted once in 24 hours per person,
+        # browser session and network address: a thief's copy, even with a stolen cookie, still leaves its own line.
+        seen = f"downloaded:{request.user.pk}:{request.session.session_key}:{client_ip(request)}:{name}"
+        if cache.add(seen, True, 24 * 60 * 60):
             audit("file_downloaded", request, file=name, **download)
     response["Cache-Control"] = "private, max-age=86400"
     return response
