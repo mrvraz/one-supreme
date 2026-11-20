@@ -146,13 +146,16 @@ if OIDC_ENABLED:
     if re.search(r"/(common|organizations|consumers)/", OIDC_OP_AUTHORIZATION_ENDPOINT + OIDC_OP_TOKEN_ENDPOINT):
         raise ImproperlyConfigured("Use the company's own tenant ID in the sign-in addresses, not common/organizations.")
     # Tokens name the tenant by its ID, in lower case, on this host. A domain name here would refuse everyone; another
-    # spelling of the host would quietly turn off the tenant check (hub/auth.py) and the leaver check.
-    if re.search(r"microsoftonline|windows\.net", OIDC_OP_TOKEN_ENDPOINT, re.I) and not re.fullmatch(
-        r"https://login\.microsoftonline\.com/[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}/oauth2/v2\.0/token", OIDC_OP_TOKEN_ENDPOINT
+    # Microsoft host (login.microsoft.com, sts.windows.net) would quietly turn off the tenant check (hub/auth.py) and
+    # the leaver check, and the pages' form-action (hub/security.py) lets the browser go on only to this host.
+    tenant_url = r"https://login\.microsoftonline\.com/[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}/oauth2/v2\.0/"
+    if re.search(r"microsoft|windows\.net", OIDC_OP_AUTHORIZATION_ENDPOINT + OIDC_OP_TOKEN_ENDPOINT, re.I) and not (
+        re.fullmatch(tenant_url + "authorize", OIDC_OP_AUTHORIZATION_ENDPOINT)
+        and re.fullmatch(tenant_url + "token", OIDC_OP_TOKEN_ENDPOINT)
     ):
         raise ImproperlyConfigured(
-            "OIDC_OP_TOKEN_ENDPOINT must be https://login.microsoftonline.com/<tenant ID>/oauth2/v2.0/token, "
-            "with the directory (tenant) ID from Entra, not a domain name."
+            "OIDC_OP_AUTHORIZATION_ENDPOINT and OIDC_OP_TOKEN_ENDPOINT must be https://login.microsoftonline.com/"
+            "<tenant ID>/oauth2/v2.0/authorize and .../token, with the directory (tenant) ID from Entra, not a domain name."
         )
     OIDC_OP_USER_ENDPOINT = env("OIDC_OP_USER_ENDPOINT")
     OIDC_OP_JWKS_ENDPOINT = env("OIDC_OP_JWKS_ENDPOINT")

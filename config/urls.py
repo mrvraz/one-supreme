@@ -14,6 +14,8 @@ admin.site.index_title = "Moderation and settings"
 urlpatterns = [
     # One sign-in page for everyone, so admins also come in through single sign-on.
     path("admin/login/", login_not_required(RedirectView.as_view(pattern_name="login", query_string=True))),
+    # And one sign-out: the admin's Log out also signs the browser out of Microsoft (hub/auth.py).
+    path("admin/logout/", login_not_required(oidc_views.OIDCLogoutView.as_view())),
     path("admin/", admin.site.urls),
     path(
         "oidc/authenticate/",
@@ -25,7 +27,7 @@ urlpatterns = [
         login_not_required(CallbackView.as_view()),
         name="oidc_authentication_callback",
     ),
-    path("oidc/logout/", oidc_views.OIDCLogoutView.as_view(), name="oidc_logout"),
+    path("oidc/logout/", login_not_required(oidc_views.OIDCLogoutView.as_view()), name="oidc_logout"),
     path("chat/", include("chat.urls")),
     path("library/", include("library.urls")),
     path("journeys/", include("journeys.urls")),

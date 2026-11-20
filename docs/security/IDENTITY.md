@@ -18,10 +18,11 @@ Someone can sign in only if all of these are true:
 
 The hub won't start with the shared Microsoft addresses (`common`, `organizations`, `consumers`) in its settings,
 or without `ALLOWED_EMAIL_DOMAINS`. Put the **tenant ID** in the three Microsoft addresses, not a domain name: the
-hub checks that each token came from that tenant. It also won't start unless the token address is exactly
-`https://login.microsoftonline.com/<tenant ID>/oauth2/v2.0/token`, in lower case. A domain name there would refuse
-everyone at their first sign-in, and another spelling of the address (such as `login.windows.net`) would quietly
-turn off the tenant check and the leaver check.
+hub checks that each token came from that tenant. If either the sign-in or the token address is a Microsoft one,
+the hub won't start unless they are exactly `https://login.microsoftonline.com/<tenant ID>/oauth2/v2.0/authorize`
+and `.../token`, in lower case. A domain name there would refuse everyone at their first sign-in. Another Microsoft
+host (such as `login.microsoft.com`, `login.windows.net` or `sts.windows.net`) would quietly turn off the tenant
+check and the leaver check, and the pages' security policy (below) wouldn't let the browser go on to it.
 
 Password sign-in is off unless `ALLOW_PASSWORD_LOGIN=1`, which is only for the break-glass account (below).
 
@@ -54,8 +55,13 @@ signed out. The security log gets `sign_in_rejected` with the reason, and Micros
 
 **When the answer isn't for a sign-in this browser started.** A link to the hub's callback address, a finished
 sign-in sent again, or a state lost when two tabs saved the session at the same moment: the browser goes to the
-sign-in page and the log gets `sign_in_rejected` ("no sign-in started with this state"), but nobody is signed
-out. Someone who was signed in carries on.
+sign-in page and the log gets `sign_in_ignored` ("no sign-in started with this state"), but nobody is signed
+out. Someone who was signed in carries on. Anyone can send these, so they are logged at INFO under their own name
+and can't set off the SIEM's alerts on `sign_in_rejected`.
+
+**Where the browser goes next.** After a sign-in or a 15-minute check, the hub sends the browser back to the page
+the person was on, but only if that page is on the hub. A crafted link such as
+`https://hub.supreme.co.uk//evil.example/` ends on the hub's home page, not on another site.
 
 ## Staying signed in
 
@@ -65,8 +71,10 @@ out. Someone who was signed in carries on.
   no prompt. If Microsoft refuses (account disabled, sessions revoked, Conditional Access now blocks), or the
   hub's own checks above refuse, the person is signed out. When the check is due, a background request (chat's
   check for new messages every 4 seconds, name suggestions) gets a "check first" answer instead; chat then
-  reloads the page, which runs the check. Form sends and files aren't re-checked this way; the leaver check
-  covers those.
+  reloads the page, which runs the check. A form send itself isn't held up, but the page it goes on to runs the
+  check. Browsers allow that trip to Microsoft only because each page's security policy (`form-action` in
+  `hub/security.py`) names `https://login.microsoftonline.com`. Files aren't re-checked; the leaver check covers
+  them.
 - **Idle limit: 12 hours.** A session that nothing has renewed for 12 hours ends, with nothing in the security
   log. The 15-minute check renews it while someone uses the hub. An open chat page renews it too, with nobody at
   the desk: its background check reloads the page every 15 minutes, so only the 24-hour limit ends that session.
@@ -76,12 +84,16 @@ out. Someone who was signed in carries on.
   logs `session_expired` and `sign_out`. Without this, the 15-minute check could keep one session going for ever.
   The person clicks "Sign in with your work account" again, and Microsoft usually lets them straight through.
   This is `MAX_SESSION_AGE` in `hub/auth.py`.
-- **Signing out** (Menu, Sign out) deletes the session on the server, so a copied cookie stops working. Then it
-  sends the browser to Microsoft's sign-out address, which also signs that browser out of Outlook, Teams and other
-  Microsoft pages open in it. So on a shared computer the next person who clicks "Sign in" has to sign in as
-  themselves. Microsoft may ask which account to sign out of, then shows its own "signed out" page. Coming back to
-  the hub's sign-in page instead would need `https://hub.supreme.co.uk/login/` added as a redirect URI in the app
-  registration, and that address added to the sign-out in `hub/auth.py`.
+- **Signing out** (Menu, Sign out, or the admin's Log out) deletes the session on the server, so a copied cookie
+  stops working. Then it sends the browser to Microsoft's sign-out address; each page's `form-action` allows that
+  address, or the browser would block the trip. Microsoft asks which account to sign out of. Once the person picks
+  theirs, Microsoft signs that browser out of Outlook, Teams and other Microsoft pages open in it, and shows its own
+  "signed out" page. Only then does the next person on a shared computer who clicks "Sign in" have to sign in as
+  themselves: someone who walks away from Microsoft's account list leaves their Microsoft session open (the hub's
+  session has already ended). Coming back to the hub's sign-in page instead would need
+  `https://hub.supreme.co.uk/login/` added as a redirect URI in the app registration, and that address added to the
+  sign-out in `hub/auth.py`.
+- Sign out from a tab whose session has already ended goes straight to the sign-in page.
 - The break-glass account never signed in to Microsoft, so its sign-out goes straight back to the hub's sign-in
   page.
 - **A link can't sign anyone out.** Sign out is a button that sends a form with the page's security token;
@@ -101,7 +113,8 @@ When IT disables or deletes someone's Entra account (Supreme's usual leaver proc
   password.
 - **Safety limit.** If one run would switch off more than a fifth of accounts (and more than 5), it changes nothing
   and fails. A lost permission or an empty answer from Microsoft must not lock out the company.
-- **Failures** are logged every time as `directory_sync_failed`. The 05:00 UTC run also emails `ADMIN_EMAILS`
+- **Failures** are logged every time as `directory_sync_failed`, at ERROR, which the SIEM alerts on (RUNBOOK.md).
+  The 05:00 UTC run also emails `ADMIN_EMAILS`
   ("Staff hub: leaver check failed"). The other runs don't email, so a long outage sends one email a day, not 96.
   Until it is fixed, the 15-minute check on page loads still signs leavers out.
 - The leaver check never switches anyone back on.
@@ -145,7 +158,8 @@ When IT disables or deletes someone's Entra account (Supreme's usual leaver proc
 | `sign_in` | Someone signed in, with single sign-on or a password. |
 | `sign_out` | Someone signed out with the button, the 24-hour limit ended their session, or a refused check signed them out. The 12-hour idle limit logs nothing. |
 | `sign_in_failed` | A password was wrong or not allowed for that account, or single sign-on found no account it could let in. |
-| `sign_in_rejected` | Single sign-on refused someone, or an answer came back to a sign-in the browser didn't start; `reason`, `error` or `email` says why. |
+| `sign_in_rejected` | Single sign-on refused a sign-in or 15-minute check the browser started; `reason`, `error` or `email` says why. |
+| `sign_in_ignored` | INFO: an answer came to the callback address for a sign-in the browser didn't start (a link or a replay). Nobody is signed out. |
 | `session_expired` | The 24-hour limit signed someone out. |
 | `account_deactivated` | The leaver check switched an account off. |
 | `directory_sync_failed` | The leaver check couldn't run, or stopped at the safety limit. |
@@ -167,25 +181,27 @@ All in `hub/tests_identity.py`.
 
 | Rule | Test |
 |---|---|
-| Live settings: PKCE, RS256, 15-minute check, 10-second limit, sign-out to Microsoft, no password backend, shared and wrongly written addresses refused | `test_production_settings_turn_on_every_check` |
+| Live settings: PKCE, RS256, 15-minute check, 10-second limit, sign-out to Microsoft, no password backend, shared addresses and other Microsoft hosts or spellings refused | `test_production_settings_turn_on_every_check` |
 | PKCE, state and nonce sent; a new session id at sign-in | `test_sign_in_uses_pkce_state_and_nonce_and_starts_a_new_session` |
 | First sign-in creates the account correctly | `test_the_first_sign_in_creates_the_account_from_the_directory` |
 | Wrong state, wrong nonce, no sign-in started: refused and logged | `test_a_reply_that_does_not_match_the_sign_in_it_started_is_refused` |
-| A replay, or a link to the callback, signs nobody out | `test_a_reply_to_a_sign_in_this_browser_did_not_start_signs_nobody_out` |
+| A replay, or a link to the callback, signs nobody out and is logged at INFO as `sign_in_ignored` | `test_a_reply_to_a_sign_in_this_browser_did_not_start_signs_nobody_out` |
 | Another tenant, another app, expired, no expiry, wrong key: refused; small clock difference: fine | `test_only_a_current_token_from_supremes_tenant_for_this_app_gets_in` |
 | Email outside the company domains, or none: refused | `test_an_address_outside_the_company_domains_is_refused` |
 | Switched-off account: refused | `test_a_switched_off_account_cannot_sign_in` |
 | Email change keeps the account | `test_an_email_change_keeps_the_same_account` |
-| The 15-minute check: passes quietly, signs out on Microsoft's refusal (logged with its error code) or the hub's | `test_the_15_minute_recheck_signs_people_out_when_it_fails` |
+| The 15-minute check: passes quietly, signs out on Microsoft's refusal (logged with its error code) or the hub's; `form-action` allows its trip to Microsoft | `test_the_15_minute_recheck_signs_people_out_when_it_fails` |
+| After the check, a crafted `//evil.example/` link still ends on the hub | `test_after_the_recheck_the_browser_only_goes_to_a_page_on_the_hub` |
 | Microsoft not answering, or answering 503: signed out, logged, no error page; every call has the 10-second limit | `test_microsoft_being_slow_or_down_signs_out_instead_of_failing_the_page` |
-| Sign out deletes the session and goes to Microsoft's sign-out; a link can't sign out | `test_signing_out_ends_the_session_and_signs_the_browser_out_of_microsoft` |
+| Sign out deletes the session and goes to Microsoft's sign-out, which `form-action` allows; a link can't sign out | `test_signing_out_ends_the_session_and_signs_the_browser_out_of_microsoft` |
+| The admin's Log out does the same | `test_the_admins_log_out_also_signs_the_browser_out_of_microsoft` |
 | Leavers switched off, their sessions deleted, and refused on every device, for pages, posts and files | `test_leavers_are_switched_off_and_signed_out_everywhere` |
 | Switching an account off deletes its sessions, so switching it on again needs a fresh sign-in | `test_switching_an_account_off_deletes_its_sessions` |
 | The leaver check runs every 15 minutes; the 05:00 run emails | `test_the_leaver_check_runs_every_15_minutes_and_emails_failures_from_its_daily_run` |
 | Leaver check failures: logged every time, emailed from the daily run | `test_a_failing_leaver_check_is_logged_every_time_and_emailed_from_the_daily_run` |
 | Linked accounts checked even with a password; break-glass left alone | `test_an_account_linked_to_single_sign_on_is_checked_even_with_a_password` |
 | Re-hire, same or new Entra account | `test_a_rehire_gets_their_own_account_back` |
-| Signing out ends the session on the server (without single sign-on) | `test_signing_out_ends_the_session_on_the_server` |
+| Signing out ends the session on the server (without single sign-on); signing out again from an ended session goes to the sign-in page | `test_signing_out_ends_the_session_on_the_server` |
 | Idle and absolute limits | `test_the_idle_and_absolute_limits` |
 | Password sign-in off unless `ALLOW_PASSWORD_LOGIN=1` | `test_password_sign_in_is_off_unless_allow_password_login_is_set` |
 | Break-glass sign-in emails IT; its sign-out goes back to the sign-in page | `test_the_break_glass_sign_in_alerts_it` |

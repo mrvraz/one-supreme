@@ -117,7 +117,9 @@ CONTENT_SECURITY_POLICY = "; ".join(
         "font-src 'self'",
         "object-src 'none'",
         "base-uri 'none'",
-        "form-action 'self'",
+        # Browsers check this on every redirect after a form is sent: Sign out goes on to Microsoft's sign-out, and
+        # the page after any form send may run the 15-minute re-check there (hub/auth.py, config/settings.py).
+        "form-action 'self' https://login.microsoftonline.com",
         "frame-ancestors 'none'",
     ]
 )

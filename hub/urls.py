@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_not_required
 from django.urls import path
 from mozilla_django_oidc.views import OIDCLogoutView
 
@@ -7,7 +8,8 @@ urlpatterns = [
     # Shell
     path("", views.feed, name="feed"),
     path("login/", views.LoginView.as_view(), name="login"),
-    path("logout/", OIDCLogoutView.as_view(), name="logout"),  # POST only; also out of Microsoft (hub/auth.py)
+    # POST only; also out of Microsoft (hub/auth.py). Open without a session, so a stale tab's Sign out just ends at /login/.
+    path("logout/", login_not_required(OIDCLogoutView.as_view()), name="logout"),
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("icon.svg", views.icon, name="icon"),
     path("sw.js", account.service_worker, name="service_worker"),

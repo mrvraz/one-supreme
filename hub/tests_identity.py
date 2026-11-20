@@ -85,6 +85,15 @@ def query(response):
     return {name: values[0] for name, values in parse_qs(urlsplit(response["Location"]).query).items()}
 
 
+def form_action(response):
+    """Where the page's Content-Security-Policy lets a form send go. Browsers check every redirect after it too."""
+    return next(rule.split()[1:] for rule in response["Content-Security-Policy"].split("; ") if rule.startswith("form-action "))
+
+
+def origin(url):
+    return "{0.scheme}://{0.netloc}".format(urlsplit(url))
+
+
 def run_leaver_check(directory, *args, error=None):
     """sync_directory against a fake Microsoft Graph that lists `directory`."""
     with mock.patch("hub.management.commands.sync_directory.requests") as requests, override_settings(
@@ -160,13 +169,21 @@ class SignInTests(SSOTestCase):
         for wrong in (
             "https://login.microsoftonline.com/supreme.co.uk/oauth2/v2.0/token",
             f"https://login.windows.net/{TENANT}/oauth2/v2.0/token",
+            f"https://login.microsoft.com/{TENANT}/oauth2/v2.0/token",
+            f"https://sts.windows.net/{TENANT}/oauth2/v2.0/token",
             f"https://Login.MicrosoftOnline.com/{TENANT}/oauth2/v2.0/token",
             f"https://login.microsoftonline.com/{TENANT.upper()}/oauth2/v2.0/token",
             f"https://login.microsoftonline.com/{TENANT}/oauth2/token",
         ):
             with self.subTest(wrong), self.assertRaisesMessage(ImproperlyConfigured, "OIDC_OP_TOKEN_ENDPOINT must be"):
                 production_settings(OIDC_OP_TOKEN_ENDPOINT=wrong)
-        production_settings(OIDC_OP_TOKEN_ENDPOINT="https://oauth2.googleapis.com/token")  # other providers are fine
+        # Another sign-in host: the pages' form-action wouldn't let the 15-minute re-check through after a form send.
+        with self.assertRaisesMessage(ImproperlyConfigured, "OIDC_OP_TOKEN_ENDPOINT must be"):
+            production_settings(OIDC_OP_AUTHORIZATION_ENDPOINT=f"https://login.microsoft.com/{TENANT}/oauth2/v2.0/authorize")
+        production_settings(  # other providers are fine
+            OIDC_OP_AUTHORIZATION_ENDPOINT="https://accounts.google.com/o/oauth2/v2/auth",
+            OIDC_OP_TOKEN_ENDPOINT="https://oauth2.googleapis.com/token",
+        )
         with self.assertRaisesMessage(ImproperlyConfigured, "ALLOWED_EMAIL_DOMAINS"):
             production_settings(ALLOWED_EMAIL_DOMAINS="")
 
@@ -197,15 +214,16 @@ class SignInTests(SSOTestCase):
         self.assertEqual(alex.policy_version, "")  # the house rules come first
 
     def test_a_reply_that_does_not_match_the_sign_in_it_started_is_refused(self):
-        with self.assertLogs("hub.security", "WARNING") as logs:
+        with self.assertLogs("hub.security", "INFO") as logs:
             self.assert_refused(self.finish_sign_in(self.start_sign_in(), state="made-up-state"))
             self.assert_refused(self.finish_sign_in(self.start_sign_in(), nonce="made-up-nonce"))
             stranger = Client()  # a browser that never started a sign-in
             self.assert_refused(self.finish_sign_in(self.start_sign_in(), client=stranger), stranger)
-        reasons = [r.details["reason"] for r in logs.records]
-        self.assertEqual(reasons[0], "no sign-in started with this state")
-        self.assertIn("Nonce verification failed", reasons[1])
-        self.assertEqual(reasons[2], "no sign-in started with this state")
+        events = [(r.getMessage(), r.details["reason"]) for r in logs.records]
+        self.assertEqual(events[0], ("sign_in_ignored", "no sign-in started with this state"))
+        self.assertEqual(events[1][0], "sign_in_rejected")  # the one sign-in this browser really started
+        self.assertIn("Nonce verification failed", events[1][1])
+        self.assertEqual(events[2], ("sign_in_ignored", "no sign-in started with this state"))
         self.assertFalse(User.objects.exists())
 
     def test_a_reply_to_a_sign_in_this_browser_did_not_start_signs_nobody_out(self):
@@ -220,9 +238,11 @@ class SignInTests(SSOTestCase):
             "a link with no state": lambda: self.client.get(callback, {"error": "login_required"}),
         }
         for name, send in replies.items():
-            with self.subTest(name), self.assertLogs("hub.security", "WARNING") as logs:
+            with self.subTest(name), self.assertLogs("hub.security", "INFO") as logs:
                 self.assertRedirects(send(), "/login/?error=sso", fetch_redirect_response=False)
-            self.assertEqual([r.details["reason"] for r in logs.records], ["no sign-in started with this state"])
+            # INFO under its own name: anyone can send these, so they mustn't set off sign_in_rejected alerts.
+            self.assertEqual([(r.levelname, r.getMessage(), r.details["reason"]) for r in logs.records],
+                             [("INFO", "sign_in_ignored", "no sign-in started with this state")])
             self.assertEqual(self.signed_in_user(), alex)  # still signed in
 
     def test_only_a_current_token_from_supremes_tenant_for_this_app_gets_in(self):
@@ -307,12 +327,23 @@ class SignInTests(SSOTestCase):
                 # Every call to Microsoft gives up after OIDC_TIMEOUT, so a stalled one can't hold a server thread.
                 self.assertTrue(all(call.kwargs["timeout"] == 10 for call in self.calls_to_microsoft))
 
-    def recheck_due(self):
+    def test_after_the_recheck_the_browser_only_goes_to_a_page_on_the_hub(self):
+        self.sign_in()
+        User.objects.update(policy_version=settings.POLICY_VERSION)
+        for link in ("//evil.example/x", "/\\evil.example/x"):  # e.g. https://hub.supreme.co.uk//evil.example/x
+            with self.subTest(link):
+                back_to = self.finish_sign_in(self.recheck_due(PATH_INFO=link))["Location"]
+                self.assertRegex(back_to, r"^/(?![/\\])")  # a page on the hub: "/", or "/%5Cevil.example/x"
+        self.assertRedirects(self.finish_sign_in(self.recheck_due()), "/people/", fetch_redirect_response=False)
+
+    def recheck_due(self, **request):
         session = self.client.session
         session["oidc_id_token_expiration"] = time.time() - 1  # 15 minutes have gone by
         session.save()
-        response = self.client.get("/people/")
+        response = self.client.get("/people/", **request)
         self.assertTrue(response["Location"].startswith(f"{ENTRA}/oauth2/v2.0/authorize?"))
+        # The page after a form send runs the check too, and browsers hold that redirect to the form-action.
+        self.assertIn(origin(response["Location"]), form_action(response))
         return query(response)
 
 
@@ -454,15 +485,27 @@ class LeaverTests(SSOTestCase):
 class SignOutTests(SSOTestCase):
     def test_signing_out_ends_the_session_and_signs_the_browser_out_of_microsoft(self):
         self.sign_in()
+        User.objects.update(policy_version=settings.POLICY_VERSION)
         key = self.client.session.session_key
+        page = self.client.get(reverse("people"))  # where the Sign out button is
         self.assertEqual(self.client.get(reverse("logout")).status_code, 405)  # a link can't sign anyone out
         self.assertIn(SESSION_KEY, self.client.session)
         with self.assertLogs("hub.security", "INFO") as logs:
             response = self.client.post(reverse("logout"))
         self.assertRedirects(response, f"{ENTRA}/oauth2/v2.0/logout", fetch_redirect_response=False)
+        self.assertIn(origin(response["Location"]), form_action(page))  # or the browser blocks the redirect
         self.assertEqual([r.getMessage() for r in logs.records], ["sign_out"])
         self.assertFalse(Session.objects.filter(session_key=key).exists())
         self.assertNotIn(SESSION_KEY, self.client.session)
+
+    def test_the_admins_log_out_also_signs_the_browser_out_of_microsoft(self):
+        self.sign_in()
+        User.objects.update(is_staff=True, is_superuser=True, policy_version=settings.POLICY_VERSION)
+        key = self.client.session.session_key
+        with self.assertLogs("hub.security", "INFO"):
+            response = self.client.post(reverse("admin:logout"))  # the admin's Log out button
+        self.assertRedirects(response, f"{ENTRA}/oauth2/v2.0/logout", fetch_redirect_response=False)
+        self.assertFalse(Session.objects.filter(session_key=key).exists())
 
 
 class SessionTests(TestCase):
@@ -474,6 +517,8 @@ class SessionTests(TestCase):
         key = self.client.session.session_key
         self.assertRedirects(self.client.post(reverse("logout")), reverse("login"), fetch_redirect_response=False)
         self.assertFalse(Session.objects.filter(session_key=key).exists())
+        # Sign out again from another tab, whose session has ended: straight to the sign-in page, not ?next=/logout/
+        self.assertRedirects(self.client.post(reverse("logout")), reverse("login"), fetch_redirect_response=False)
         copied = Client()  # someone who copied the cookie before
         copied.cookies[settings.SESSION_COOKIE_NAME] = key
         self.assertRedirects(copied.get(reverse("people")), f"{reverse('login')}?next=/people/", fetch_redirect_response=False)

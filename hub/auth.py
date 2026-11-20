@@ -11,6 +11,7 @@ from django.core.exceptions import SuspiciousOperation
 from django.http import HttpResponseRedirect
 from django.shortcuts import resolve_url
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from mozilla_django_oidc.auth import OIDCAuthenticationBackend
 from mozilla_django_oidc.views import OIDCAuthenticationCallbackView
 
@@ -108,16 +109,26 @@ class EmployeeOIDCBackend(OIDCAuthenticationBackend):
 
 class CallbackView(OIDCAuthenticationCallbackView):
     """Where Microsoft sends people back. Unlike the library's view, a refused reply to a sign-in this browser
-    started signs the person out, and every refusal is in the security log.
+    started signs the person out, every refusal is in the security log, and the page it goes on to is checked.
 
     The library keeps someone signed in when their 15-minute re-check comes back refused (say their email is now
     outside ALLOWED_EMAIL_DOMAINS), and answers a wrong nonce, a bad token or a Microsoft outage with an error page."""
 
+    @property
+    def success_url(self):
+        # SessionRefresh saves the page the re-check interrupted without checking it, e.g. //evil.example/ from a link.
+        request = self.request
+        next_url = request.session.get("oidc_login_next")
+        if next_url and url_has_allowed_host_and_scheme(next_url, {request.get_host()}, require_https=request.is_secure()):
+            return next_url
+        return resolve_url(settings.LOGIN_REDIRECT_URL)
+
     def get(self, request):
         if request.GET.get("state") not in request.session.get("oidc_states", {}):
             # Not an answer to a sign-in started here: a link, a replay, or a state lost when two tabs saved the
-            # session at once. Signing out on it would let any link end someone's session.
-            audit("sign_in_rejected", request, level=logging.WARNING, reason="no sign-in started with this state",
+            # session at once. Signing out on it would let any link end someone's session. INFO, under its own
+            # name: anyone can send these, so they mustn't set off the SIEM's sign_in_rejected alerts.
+            audit("sign_in_ignored", request, reason="no sign-in started with this state",
                   error=request.GET.get("error", "")[:100])
             return HttpResponseRedirect(self.failure_url)
         if request.GET.get("error") or not request.GET.get("code"):
