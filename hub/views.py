@@ -165,6 +165,7 @@ def media(request, path):
     if not shown_inline or isinstance(allowed, str):
         filename = allowed if isinstance(allowed, str) else os.path.basename(name)
         response["Content-Disposition"] = content_disposition_header(as_attachment=not shown_inline, filename=filename)
+        audit("file_downloaded", request, file=name)  # files and attachments, not the photos shown in the feed
     response["Cache-Control"] = "private, max-age=86400"
     return response
 
