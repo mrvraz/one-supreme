@@ -1,0 +1,120 @@
+# Publishes a release when a version tag such as v2.0.1 is pushed; docs/operations/RELEASES.md says how to cut one.
+# Every test runs on Postgres 17, then the image the server runs is built, checked against an empty Postgres 17 and
+# published to GitHub's container registry with a record of how it was built. If any step fails, nothing is published.
+# Every action is pinned to a commit, so a moved tag can't change what runs. Dependabot keeps the pins current.
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+# No access by default; each job asks for what it needs.
+permissions: {}
+
+# One release at a time, and never cancelled halfway through publishing.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Tests
+    permissions:
+      contents: read
+    uses: ./.github/workflows/postgres.yml
+
+  publish:
+    name: Build, check and publish the image
+    needs: tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read # check out the code
+      packages: write # publish to ghcr.io; the token is only used after every check below has passed
+    services:
+      db:
+        image: postgres:17 # the same major version as docker-compose.yml
+        env:
+          POSTGRES_DB: hub
+          POSTGRES_USER: hub
+          # A throwaway database that only this job can reach, so it needs no password.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U hub -d hub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # main's history too, for the next step
+          persist-credentials: false
+
+      # Only reviewed code is released: main accepts nothing without a pull request and green checks.
+      - name: The tag is on main and matches the version in the code and the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          git merge-base --is-ancestor HEAD origin/main \
+            || { echo "::error::$GITHUB_REF_NAME is not on main. Tag a commit on main."; exit 1; }
+          grep -qxF "APP_VERSION = \"$version\"" config/settings.py \
+            || { echo "::error::APP_VERSION in config/settings.py is not \"$version\"."; exit 1; }
+          grep -qF "## [$version]" CHANGELOG.md \
+            || { echo "::error::CHANGELOG.md has no \"## [$version]\" entry."; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV" # registry names must be lower case
+
+      # The Dockerfile's last stage: the one docker compose runs. A builder of its own, because Docker's default
+      # builder can't store the build record with the image.
+      - name: Build the image
+        run: |
+          docker buildx create --use --driver docker-container
+          docker buildx build --pull --load --tag hub:check .
+
+      - name: Every database change applies to an empty Postgres 17, and none is missing
+        run: |
+          docker run --rm --network host -e DB_HOST=localhost -e DB_NAME=hub -e DB_USER=hub \
+            -e SECRET_KEY="$(openssl rand -hex 32)" hub:check \
+            sh -c "python manage.py migrate --noinput && python manage.py makemigrations --check --dry-run"
+
+      - name: The image starts and answers
+        run: |
+          docker run -d --name hub --network host -e DB_HOST=localhost -e DB_NAME=hub -e DB_USER=hub \
+            -e SECRET_KEY="$(openssl rand -hex 32)" hub:check
+          curl -fsS -o /dev/null --retry 20 --retry-delay 2 --retry-all-errors http://localhost:8000/ \
+            || { docker logs hub; exit 1; }
+          docker rm -f hub
+
+      - name: Sign in to GitHub's container registry
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      # A published version never changes, so the version a server rolls back to is always the same image.
+      - name: This version is not published yet
+        run: |
+          if docker buildx imagetools inspect "$IMAGE:$VERSION" > /dev/null 2>&1; then
+            echo "::error::$IMAGE:$VERSION is already published. Release the next version instead."
+            exit 1
+          fi
+
+      # Same builder, so every layer comes from the build checked above; only the labels are new. mode=max stores
+      # how it was built (commit, Dockerfile, base image) with the image. GitHub's signed attestations would need
+      # GitHub Enterprise for a private repository, so the digest below is what pins the server to this image.
+      - name: Publish the image
+        run: |
+          docker buildx build --push --provenance=mode=max --metadata-file "$RUNNER_TEMP/build.json" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.version=$VERSION" \
+            --label "org.opencontainers.image.revision=$REVISION" \
+            --tag "$IMAGE:$VERSION" .
+          digest="$(jq -r '."containerimage.digest"' "$RUNNER_TEMP/build.json")"
+          case "$digest" in sha256:*) ;; *) echo "::error::No image digest in the build output."; exit 1 ;; esac
+          {
+            echo "### Published $IMAGE:$VERSION"
+            echo "The line for the server's \`.env\` (docs/operations/RELEASES.md, Install a release):"
+            echo '```'
+            echo "HUB_IMAGE=$IMAGE:$VERSION@$digest"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -24,6 +24,8 @@ services:
     logging: *logging
 
   app:
+    # A release's image from GitHub (docs/operations/RELEASES.md), or, with HUB_IMAGE empty, built from this folder.
+    image: ${HUB_IMAGE:-one-supreme:local}
     build: .
     env_file: .env
     environment: &app_env
@@ -41,6 +43,7 @@ services:
 
   # Every minute: scheduled posts, event reminders, push. Hourly: disk check. 05:00 UTC: digest, leaver check, clean-up.
   scheduler:
+    image: ${HUB_IMAGE:-one-supreme:local}
     build: .
     env_file: .env
     environment: *app_env

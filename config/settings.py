@@ -51,7 +51,8 @@ if BRAND and not (
     re.fullmatch(r"[a-z0-9-]+", BRAND) and all((BASE_DIR / "hub/static/hub/brand" / BRAND / f).is_file() for f in BRAND_FILES)
 ):
     raise ImproperlyConfigured(f"BRAND={BRAND} needs logo.png, logo-white.png and icon.png in hub/static/hub/brand/{BRAND}/")
-APP_VERSION = "2.0"
+# Change it with each release: the release workflow refuses a tag that doesn't match (docs/operations/RELEASES.md).
+APP_VERSION = "2.0.0"
 
 INSTALLED_APPS = [
     "hub",

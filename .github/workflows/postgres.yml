@@ -1,0 +1,58 @@
+# The server runs Postgres 17, but ci.yml runs the tests on SQLite. This runs every test again on Postgres 17, so
+# whatever only Postgres refuses (text longer than its column, a database change that won't apply) fails here first.
+# release.yml runs it too, before it publishes an image.
+name: Postgres
+
+on:
+  push:
+    branches: ["**"] # a version tag runs it through release.yml instead
+  pull_request:
+  workflow_call:
+
+# No access by default; the job asks for what it needs.
+permissions: {}
+
+jobs:
+  test:
+    name: Tests on Postgres 17
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    services:
+      db:
+        image: postgres:17 # the same major version as docker-compose.yml
+        env:
+          POSTGRES_DB: hub
+          POSTGRES_USER: hub
+          # A throwaway database that only this job can reach, so it needs no password.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U hub -d hub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DEBUG: "1"
+      ALLOW_PASSWORD_LOGIN: "1"
+      # The settings docker-compose.yml gives the app; config/settings.py switches to Postgres when DB_HOST is set.
+      DB_HOST: localhost
+      DB_NAME: hub
+      DB_USER: hub
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      # Without ffmpeg the video upload tests are skipped.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: pip install -r requirements.txt
+      # The test database is built by applying every migration, so this also checks they all apply on Postgres.
+      - name: Tests
+        run: python manage.py test --parallel 4
