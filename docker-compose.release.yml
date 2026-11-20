@@ -1,0 +1,15 @@
+# The server's addition to docker-compose.yml: the hub runs the image a release published, pinned by its digest, and
+# is never built on the server (docs/operations/RELEASES.md). Two lines in .env turn it on:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.release.yml
+#   HUB_IMAGE=<the line from the release's run on GitHub>
+# With it, "docker compose build" and "--build" only build the services that have no published image (the backup
+# tools). !reset needs Docker Compose 2.24 or newer.
+#
+# Every service that runs the hub's code belongs here, so that no command can build it on the server.
+services:
+  app:
+    image: ${HUB_IMAGE:?Set HUB_IMAGE in .env to the line from the release's run on GitHub}
+    build: !reset null
+  scheduler:
+    image: ${HUB_IMAGE:?Set HUB_IMAGE in .env to the line from the release's run on GitHub}
+    build: !reset null

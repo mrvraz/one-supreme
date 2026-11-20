@@ -126,7 +126,7 @@ fly ssh console -C "setpriv --reuid=app --regid=app --init-groups python manage.
 
 What Supreme's IT needs to provide:
 
-1. **A Linux server or VM with Docker** and Docker Compose 2.17 or newer (2 CPUs, 4 GB RAM and 100 GB disk is plenty for 500 people; video uploads drive disk use).
+1. **A Linux server or VM with Docker** and Docker Compose 2.24 or newer (2 CPUs, 4 GB RAM and 100 GB disk is plenty for 500 people; video uploads drive disk use).
 2. **An address and HTTPS**, for example `hub.supreme.co.uk`, through their existing load balancer or reverse proxy, forwarding to the server's port 8080. The proxy must pass on the original `Host` header (not swap in the server's address), add `X-Forwarded-For` with the visitor's address, and set `X-Forwarded-Proto: https`. Without the first, every page is refused; without the second, all staff share one request limit.
 3. **An Entra ID app registration**: single tenant, redirect URI `https://hub.supreme.co.uk/oidc/callback/`, plus a client secret, and the Microsoft Graph application permission `User.Read.All` with admin consent (for the leaver check). (Google Workspace works too, without the leaver check; see `.env.example`.)
 4. **An SMTP relay** for the daily digest and disk alerts.
@@ -137,7 +137,7 @@ What Supreme's IT needs to provide:
 Then on the server:
 
 ```bash
-cp .env.example .env          # fill in every value marked required, plus SSO and email
+cp .env.example .env          # fill in every value marked required, SSO, email and the release lines (docs/operations/RELEASES.md)
 docker compose run --rm app python manage.py vapid_keys      # paste the two lines into .env for push
 docker compose up -d --build
 docker compose exec app python manage.py createsuperuser   # first admin (break-glass account)
@@ -156,7 +156,7 @@ The first admin's password only works while `ALLOW_PASSWORD_LOGIN=1`. Normally l
 
 **What's new:** add an entry under "Feature notes" in the admin after each update; staff see a count next to About and help until they've opened it.
 
-**Updates:** `git pull && docker compose up -d --build`. Database changes apply automatically on start.
+**Updates:** install each release as in `docs/operations/RELEASES.md`. The server runs the image the release published and never builds the hub itself. Database changes apply automatically on start.
 
 **Backups** (schedule daily, keep copies off the server):
 
@@ -185,7 +185,7 @@ The code can't do these; they decide how safe the hub really is.
 - **Require multi-factor sign-in** for this app in Entra ID Conditional Access (optionally, company-managed devices only). The single biggest protection.
 - **HTTPS end to end**, then set `SECURE_SSL_REDIRECT=1` and `SECURE_HSTS_SECONDS=31536000`. Firewall the server so only the proxy reaches it; limit `/admin/` to the office network or VPN at the proxy.
 - **Encrypted disks and encrypted off-site backups**, with a test restore every quarter.
-- **Monthly patching** of the server, Docker images (`docker compose pull && docker compose up -d --build --pull always`, which also updates Postgres and nginx) and Python libraries (`pip-audit -r requirements.txt` flags known holes).
+- **Monthly patching** of the server, Docker images (`docker compose pull && docker compose up -d --build --pull always`, which updates Postgres, nginx and the backup tools; the hub's own fixes come in releases, `docs/operations/RELEASES.md`) and Python libraries (`pip-audit -r requirements.txt` flags known holes).
 - **A certificate instead of a client secret** for the Entra app, and `.env` readable only by the account that runs Docker (`chmod 600 .env`).
 - **Paperwork:** a data protection impact assessment (DPIA), a staff privacy notice, retention periods (`POST_RETENTION_DAYS`, `LEAVER_RETENTION_DAYS`, `CHAT_RETENTION_DAYS`), named moderators and an HR escalation route, a breach plan (serious breaches go to the ICO within 72 hours), and an independent penetration test before rollout.
 - Run `python manage.py check --deploy` against the production settings.

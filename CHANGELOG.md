@@ -7,8 +7,11 @@ each number means, and how to cut, install and roll back a release.
 Each entry says whether it changes the database and whether it needs new settings, because that decides how it is
 rolled back:
 
-- **Database changes: none** or **adds only**: roll back by running the previous image.
-- **Database changes: removes or rewrites**: rolling back also means restoring the backup taken before installing.
+- **Database changes: none** or **adds only** (new tables, columns and indexes that the previous version can
+  ignore): roll back by running the previous image.
+- **Database changes: needs the backup to roll back**: rolling back also means restoring the backup taken before
+  installing. Every removal or rewrite, and every addition the previous version would trip over: a new link to an
+  existing table, such as people or posts, or a new rule on one. The entry says which.
 
 ## [2.0.0] - 2026-12-01
 

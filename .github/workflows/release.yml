@@ -1,7 +1,8 @@
 # Publishes a release when a version tag such as v2.0.1 is pushed; docs/operations/RELEASES.md says how to cut one.
 # Every test runs on Postgres 17, then the image the server runs is built, checked against an empty Postgres 17 and
 # published to GitHub's container registry with a record of how it was built. If any step fails, nothing is published.
-# Every action is pinned to a commit, so a moved tag can't change what runs. Dependabot keeps the pins current.
+# Every action is pinned to a commit and the BuildKit image to a digest, so a moved tag can't change what runs.
+# Dependabot keeps the action pins current.
 name: Release
 
 on:
@@ -11,9 +12,10 @@ on:
 # No access by default; each job asks for what it needs.
 permissions: {}
 
-# One release at a time, and never cancelled halfway through publishing.
+# Never two runs of the same tag at once, and never cancelled halfway through publishing. One group per tag, because
+# GitHub cancels a run that waits in a group when another one joins it.
 concurrency:
-  group: release
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -63,13 +65,18 @@ jobs:
             || { echo "::error::CHANGELOG.md has no \"## [$version]\" entry."; exit 1; }
           echo "VERSION=$version" >> "$GITHUB_ENV"
           echo "REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV" # registry names must be lower case
+          # Named after the hub, not the repository, so renaming the repository doesn't rename the image.
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/one-supreme" >> "$GITHUB_ENV" # must be lower case
 
       # The Dockerfile's last stage: the one docker compose runs. A builder of its own, because Docker's default
-      # builder can't store the build record with the image.
+      # builder can't store the build record with the image. Its BuildKit image is pinned by digest: it builds every
+      # published layer and holds the registry sign-in. Dependabot can't see this pin: bump it by hand, version and
+      # digest together (docker buildx imagetools inspect moby/buildkit:<version> prints the digest).
       - name: Build the image
+        env:
+          BUILDKIT_IMAGE: moby/buildkit:v0.34.2@sha256:c5f8862f52499773af85bc07695b2379ef08e8002352b0df2c4864c91d78dabe
         run: |
-          docker buildx create --use --driver docker-container
+          docker buildx create --use --driver docker-container --driver-opt "image=$BUILDKIT_IMAGE"
           docker buildx build --pull --load --tag hub:check .
 
       - name: Every database change applies to an empty Postgres 17, and none is missing
@@ -82,7 +89,8 @@ jobs:
         run: |
           docker run -d --name hub --network host -e DB_HOST=localhost -e DB_NAME=hub -e DB_USER=hub \
             -e SECRET_KEY="$(openssl rand -hex 32)" hub:check
-          curl -fsS -o /dev/null --retry 20 --retry-delay 2 --retry-all-errors http://localhost:8000/ \
+          curl -fsS -o /dev/null --retry 20 --retry-delay 2 --retry-all-errors \
+            -H "X-Forwarded-Proto: https" http://localhost:8000/login/ \
             || { docker logs hub; exit 1; }
           docker rm -f hub
 
@@ -91,7 +99,8 @@ jobs:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: echo "$TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
 
-      # A published version never changes, so the version a server rolls back to is always the same image.
+      # Each version is published once, by this workflow. Any workflow in this repository could push to the package,
+      # so a tag there proves nothing: the server trusts only the digest in this run's summary (RELEASES.md).
       - name: This version is not published yet
         run: |
           if docker buildx imagetools inspect "$IMAGE:$VERSION" > /dev/null 2>&1; then
@@ -113,7 +122,8 @@ jobs:
           case "$digest" in sha256:*) ;; *) echo "::error::No image digest in the build output."; exit 1 ;; esac
           {
             echo "### Published $IMAGE:$VERSION"
-            echo "The line for the server's \`.env\` (docs/operations/RELEASES.md, Install a release):"
+            echo "The line for the server's \`.env\`. IT copies it from this page, never from a message"
+            echo "(docs/operations/RELEASES.md, Install a release):"
             echo '```'
             echo "HUB_IMAGE=$IMAGE:$VERSION@$digest"
             echo '```'
