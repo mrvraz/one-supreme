@@ -72,7 +72,9 @@ def spread(rnd, total, weights, most):
 
 def after(rnd, start, now, mean_hours):
     """A moment a little after start (mostly within mean_hours), never in the future."""
-    return min(start + timedelta(hours=rnd.expovariate(1 / mean_hours)), now)
+    moment = start + timedelta(hours=rnd.expovariate(1 / mean_hours))
+    # Not simply capped at now: the newest posts' comments would all share one time, and "newest" would mean nothing.
+    return moment if moment < now else start + (now - start) * rnd.random()
 
 
 class Command(BaseCommand):
@@ -280,7 +282,7 @@ class Command(BaseCommand):
         top.sort(key=lambda c: c.created_at)
         top = self.bulk(Comment, top)
         # Most replies land here and there. The newest thread under each pinned post is a long conversation of 60 to
-        # 200, which is what the feed and the busiest post show first.
+        # 200, which the feed and the busiest post show.
         newest = {c.post_id: c for c in top if c.post.pinned_at}  # top is sorted by time, so the newest one stays
         parents = [c for c in newest.values() for _ in range(rnd.randint(60, 200))][:self.n["comments"] - top_n]
         parents += rnd.choices(top, k=self.n["comments"] - top_n - len(parents))

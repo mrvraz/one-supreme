@@ -195,7 +195,7 @@ The code can't do these; they decide how safe the hub really is.
 - Videos are cleaned but not converted between formats, so an iPhone HEVC video may not play in every browser. Add background transcoding if staff report problems.
 - One photo description applies to every photo in a post.
 - Chat checks for new messages every few seconds instead of keeping a live connection; fine for 500 people.
-- Speed was measured with a year of made-up use by 500 staff: `docs/operations/CAPACITY.md` has the numbers, the server settings and how to measure again (`seed_load`, then `benchmark`, on a test copy only).
+- Speed was measured with a year of made-up use by 500 staff: `docs/operations/CAPACITY.md` has the numbers, the server settings and how to measure again (`seed_load`, then `benchmark`, on a throwaway database only, never the test or live hub).
 - Two colleagues with exactly the same name are both mentioned by "@Name".
 - Calendar files don't fold long lines (all major calendar apps accept them).
 - Job titles and departments are typed by staff; only names, emails and account status come from Entra ID. Organisation units are set up by hand in the hub.

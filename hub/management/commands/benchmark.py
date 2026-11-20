@@ -80,16 +80,17 @@ class Command(BaseCommand):
 
         self.stdout.write(
             f"Fastest of {runs} runs on {connection.vendor}: {User.objects.count()} people, {Post.objects.count()} posts, "
-            f"{Comment.objects.count()} comments. Times in milliseconds; SQL is the part spent in the database.\n"
+            f"{Comment.objects.count()} comments. Times in milliseconds; SQL is the part spent in the database; KB is the "
+            "page's size.\n"
         )
-        self.stdout.write("| Page | " + " | ".join(f"{r} | SQL | Queries" for r in roles.values()) + " |")
-        self.stdout.write("|---|" + "--:|" * 3 * len(roles))
+        self.stdout.write("| Page | " + " | ".join(f"{r} | SQL | Queries | KB" for r in roles.values()) + " |")
+        self.stdout.write("|---|" + "--:|" * 4 * len(roles))
         for name in results["load-admin"]:
             cells = [results[username].get(name) for username in roles]
-            self.stdout.write(f"| {name} | " + " | ".join(" | ".join(map(str, c[:3])) if c else "- | - | -" for c in cells) + " |")
+            self.stdout.write(f"| {name} | " + " | ".join(" | ".join(map(str, c[:4])) if c else "- | - | - | -" for c in cells) + " |")
         if sql:
             for username, rows in results.items():
-                for name, (_ms, sql_ms, _n, slowest) in rows.items():
+                for name, (*_numbers, slowest) in rows.items():
                     self.stdout.write(f"\n{roles[username]}, {name}: {slowest[0]:.1f} ms {slowest[1][:600]}")
 
     def client_for(self, user):
@@ -101,7 +102,7 @@ class Command(BaseCommand):
         return client
 
     def measure(self, client, url, runs):
-        """(fastest time in ms, or the status if the page failed; its SQL time; number of queries; the slowest query)."""
+        """(fastest time in ms, or the status if the page failed; its SQL time; number of queries; KB; the slowest query)."""
         client.get(url, secure=True)  # the first open also loads templates and fills caches
         best = None
         for _ in range(runs):
@@ -113,6 +114,7 @@ class Command(BaseCommand):
             if best is None or took < best[0]:
                 best = took, queries
         if response.status_code != 200:
-            return f"HTTP {response.status_code}", "-", len(best[1]), (0, "")
+            return f"HTTP {response.status_code}", "-", len(best[1]), "-", (0, "")
         took, queries = best
-        return round(took), round(sum(ms for ms, _sql in queries)), len(queries), max(queries, default=(0, ""))
+        kb = round(len(response.content) / 1024)
+        return round(took), round(sum(ms for ms, _sql in queries)), len(queries), kb, max(queries, default=(0, ""))
