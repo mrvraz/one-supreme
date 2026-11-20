@@ -75,7 +75,7 @@ def admin_emails_set(app_configs, **kwargs):
         return []
     # Info, not Warning: CI runs check --deploy --fail-level WARNING without any mail settings.
     return [checks.Info(
-        "ADMIN_EMAILS is empty, so security alerts and server error alerts reach nobody.",
+        "ADMIN_EMAILS is empty, so the security, disk and leaver check alerts reach nobody.",
         hint="Set ADMIN_EMAILS in .env to IT's alert mailbox (docs/operations/SECURITY-ALERTS.md).", id="hub.I001",
     )]
 
