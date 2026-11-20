@@ -805,7 +805,8 @@ def community_detail(request, slug):
             return done
     elif request.method == "POST":
         raise PermissionDenied
-    posts = post_queryset().filter(community=group)
+    # viewable_by: an org admin may run a private group without being in it, but its posts stay with its members.
+    posts = post_queryset().viewable_by(user).filter(community=group)
     pinned = decorate(posts.filter(pinned_at__isnull=False).order_by("-pinned_at")[:5], user)
     page = paginate(request, posts.exclude(pk__in=[p.pk for p in pinned]))
     now = timezone.now()

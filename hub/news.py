@@ -105,7 +105,8 @@ def news_ack(request, pk):
 
 def news_readers(request, pk):
     """For the publisher of a must-read item: who has confirmed and who hasn't yet."""
-    post = get_object_or_404(Post.objects.visible(), pk=pk, kind=Post.NEWS)
+    # viewable_by: a publisher outside a private group must not learn who is in it from its news.
+    post = get_object_or_404(Post.objects.visible().viewable_by(request.user), pk=pk, kind=Post.NEWS)
     if post.author_id != request.user.pk and not can_publish(request.user):
         raise PermissionDenied
     if not post.requires_ack:
