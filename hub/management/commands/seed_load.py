@@ -1,8 +1,9 @@
 """Fills an empty database with a year of made-up use by 500 staff, to measure how fast the busy pages stay.
 
 Everything is invented: names put together from short lists, example.com addresses, and file names with no file
-behind them. Nobody can sign in as these people (the benchmark command signs in directly). Never run it on a
-live system: it is for a copy of the hub that exists to be measured.
+behind them. Nobody can sign in as these people (the benchmark command signs in directly), and they get no daily
+email. It refuses a database that has any accounts. Run it only on a throwaway database that exists to be measured,
+never on the live hub or the test hub (docs/operations/CAPACITY.md).
 """
 
 import random
@@ -79,13 +80,14 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--scale", type=float, default=1.0, help="Multiply every amount, e.g. 0.1 for a quick try.")
-        parser.add_argument("--force", action="store_true", help="Run even when DEBUG is off (a test server).")
+        parser.add_argument("--force", action="store_true", help="Run even when DEBUG is off (a throwaway Postgres).")
 
     def handle(self, *args, **options):
         if not (settings.DEBUG or options["force"]):
-            raise CommandError("seed_load is for a test copy of the hub. Use --force on a test server, never on a live one.")
-        if Post.objects.exists():
-            raise CommandError("The database already has posts; seed_load only fills an empty one.")
+            raise CommandError("seed_load is for a throwaway copy of the hub. Use --force there, never on the live or test hub.")
+        # No migration makes accounts, so an empty database has none. A live hub has staff even before its first post.
+        if User.objects.exists():
+            raise CommandError("The database already has people; seed_load only fills an empty one.")
         self.n = {key: max(1, round(value * options["scale"])) for key, value in COUNTS.items()}
         self.n["people"] = max(self.n["people"], 20)  # enough for group chats and the two benchmark accounts
         self.rnd, self.now, started = random.Random(27), timezone.now(), time.monotonic()
@@ -118,7 +120,7 @@ class Command(BaseCommand):
             rows.append(User(
                 username=username, email=f"{username}@example.com", password=no_password, first_name=first,
                 last_name=last, department=rnd.choice(DEPARTMENTS), job_title=text(rnd, 1, 2)[:-1],
-                is_staff=i == 0, is_superuser=i == 0, policy_version=settings.POLICY_VERSION,
+                is_staff=i == 0, is_superuser=i == 0, policy_version=settings.POLICY_VERSION, email_digest=False,
                 start_date=today - timedelta(days=rnd.randint(10, 4000)),
                 birthday=(today - timedelta(days=rnd.randint(0, 365))).replace(year=2000) if rnd.random() < 0.3 else None,
                 last_seen=self.now - timedelta(minutes=rnd.randint(0, 60 * 24 * 7)), date_joined=self.now - timedelta(days=365),
@@ -277,10 +279,13 @@ class Command(BaseCommand):
                     for _ in range(count)]
         top.sort(key=lambda c: c.created_at)
         top = self.bulk(Comment, top)
-        replies = []
-        for parent in rnd.sample(top, min(len(top), self.n["comments"] - top_n)):
-            replies.append(Comment(post_id=parent.post_id, parent=parent, author=rnd.choice(users), body=text(rnd, 2, 15),
-                                   created_at=after(rnd, parent.created_at, now, 6)))
+        # Most replies land here and there. The newest thread under each pinned post is a long conversation of 60 to
+        # 200, which is what the feed and the busiest post show first.
+        newest = {c.post_id: c for c in top if c.post.pinned_at}  # top is sorted by time, so the newest one stays
+        parents = [c for c in newest.values() for _ in range(rnd.randint(60, 200))][:self.n["comments"] - top_n]
+        parents += rnd.choices(top, k=self.n["comments"] - top_n - len(parents))
+        replies = [Comment(post_id=parent.post_id, parent=parent, author=rnd.choice(users), body=text(rnd, 2, 15),
+                           created_at=after(rnd, parent.created_at, now, 6)) for parent in parents]
         replies.sort(key=lambda c: c.created_at)
         comments = top + self.bulk(Comment, replies)
         latest = {}

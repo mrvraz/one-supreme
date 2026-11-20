@@ -1,10 +1,11 @@
 """Times the 15 pages staff open most, for an ordinary colleague and for a moderator, and counts their queries.
 
 Run it on a database filled by seed_load:  python manage.py benchmark
-It opens pages like a person would (opening a chat marks it read), so use a test copy of the hub.
+It opens pages like a person would (opening a chat marks it read), so use only the throwaway copy seed_load filled.
 """
 
 import time
+from ipaddress import ip_network
 
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -69,8 +70,9 @@ class Command(BaseCommand):
             raise CommandError("Fill the database with seed_load first.")
         roles = {"load-user": "Colleague", "load-admin": "Moderator"}
         results = {}
-        # The test client's address is "testserver", and https so the HTTPS redirect doesn't answer instead.
-        with override_settings(ALLOWED_HOSTS=[*settings.ALLOWED_HOSTS, "testserver"]):
+        # The test client's address is "testserver", and https so the HTTPS redirect doesn't answer instead. It comes
+        # from 127.0.0.1, which the /admin/ address check lets in for these runs only.
+        with override_settings(ALLOWED_HOSTS=[*settings.ALLOWED_HOSTS, "testserver"], ADMIN_ALLOWED_RANGES=[ip_network("127.0.0.1/32")]):
             for username in roles:
                 user, client = people[username], self.client_for(people[username])
                 todo = pages(user) + ([(name, reverse(url)) for name, url in ADMIN_PAGES] if user.is_superuser else [])

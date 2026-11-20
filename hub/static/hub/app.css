@@ -285,7 +285,7 @@ input[type=checkbox], input[type=radio] { width: 20px; height: 20px; accent-colo
 .react-picker .menu button.on { background: var(--accent-soft); }
 .comments { margin-top: 10px; padding-top: 10px; display: grid; gap: 10px; }
 .comment { display: flex; gap: 8px; align-items: flex-start; }
-.comment.reply { margin-left: 40px; }
+.comment.reply, .more-replies { margin-left: 40px; }
 .bubble { background: var(--surface-2); border-radius: var(--radius); padding: 8px 14px; overflow-wrap: anywhere; }
 .bubble p { margin: 0; }
 .bubble img { display: block; max-height: 220px; border-radius: var(--radius-sm); margin-top: 6px; } /* --radius minus the bubble's 8px padding */
@@ -412,7 +412,7 @@ html[data-look="daylight-dark"] .login-logo.for-light, html:not([data-look="dayl
   .nav .badge { position: absolute; top: 3px; left: calc(50% + 6px); }
   .page { margin-top: 8px; }
   h1 { font-size: 28px; }
-  .comment.reply { margin-left: 24px; }
+  .comment.reply, .more-replies { margin-left: 24px; }
   .toolbar { margin-left: 0; }
 }
 @media (prefers-reduced-motion: no-preference) {

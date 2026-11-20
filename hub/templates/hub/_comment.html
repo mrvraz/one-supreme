@@ -28,4 +28,5 @@
     </div>
   </div>
 </div>
+{% if c.more_replies %}<a class="small muted more-replies" href="{% if full %}?comments=all{% else %}{{ post.get_absolute_url }}{% endif %}#comment-{{ c.pk }}">View {{ c.more_replies }} more repl{{ c.more_replies|pluralize:"y,ies" }}</a>{% endif %}
 {% for r in c.reply_list %}{% include "hub/_comment.html" with c=r %}{% endfor %}

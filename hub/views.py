@@ -173,33 +173,37 @@ def media(request, path):
 
 
 # Comment threads loaded per post: a card in a list shows two (the third tells it there are more), the post's own page 50.
+# Each thread brings its newest replies: three on a card, 20 on the post's own page.
 CARD_THREADS, PAGE_THREADS = 3, 50
+CARD_REPLIES, PAGE_REPLIES = 3, 20
 
 
-def post_queryset(live=True, threads=CARD_THREADS):
+def post_queryset(live=True, threads=CARD_THREADS, replies=CARD_REPLIES):
     """Posts with everything a post card shows. live=False also includes drafts and scheduled posts.
 
-    Only the newest `threads` comment threads come with each post (None: all of them): a busy announcement has hundreds.
+    Only the newest `threads` comment threads come with each post, each with its newest `replies` replies (None: all
+    of them): a busy announcement has hundreds of each.
     """
     posts = Post.objects.visible() if live else Post.objects.filter(is_hidden=False, deleted_at__isnull=True)
-    comments = Comment.objects.visible().select_related("author").prefetch_related("reactions", "mentions")
-    newest = comments.filter(parent=None).prefetch_related(Prefetch("replies", queryset=comments)).order_by("-created_at")
+    comments = Comment.objects.visible().select_related("author").prefetch_related("reactions", "mentions").order_by("-created_at")
+    newest = comments.filter(parent=None).prefetch_related(
+        Prefetch("replies", queryset=comments if replies is None else comments[:replies], to_attr="newest_replies"))
     return posts.select_related("author", "community", "event").prefetch_related(
         "attachments", "audiences", "mentions", "options",
         Prefetch("comments", queryset=newest if threads is None else newest[:threads], to_attr="threads"),
     )
 
 
-def page_threads(url):
-    """How many threads the post's own page shows at this address: the newest PAGE_THREADS, or all once asked."""
-    return None if "comments=all" in url else PAGE_THREADS
+def page_comments(url):
+    """(threads, replies per thread) the post's own page shows at this address: the newest, or all once asked."""
+    return (None, None) if "comments=all" in url else (PAGE_THREADS, PAGE_REPLIES)
 
 
-def get_post(request, pk, threads=CARD_THREADS):
+def get_post(request, pk, threads=CARD_THREADS, replies=CARD_REPLIES):
     """A post the person may open, including their own drafts and scheduled posts. 404 otherwise."""
-    post = post_queryset(threads=threads).viewable_by(request.user).filter(pk=pk).first()
+    post = post_queryset(threads=threads, replies=replies).viewable_by(request.user).filter(pk=pk).first()
     if post is None:
-        post = post_queryset(live=False, threads=threads).filter(pk=pk, author=request.user).first()
+        post = post_queryset(live=False, threads=threads, replies=replies).filter(pk=pk, author=request.user).first()
     if post is None:
         raise Http404
     return post
@@ -234,9 +238,15 @@ def decorate(posts, user):
     for post_id, kind, n in by_kind:
         reaction_counts[post_id][kind] = n
     my_reactions = dict(Reaction.objects.filter(post__in=posts, user=user).values_list("post_id", "kind"))
-    per_post = Comment.objects.visible().filter(post__in=posts).values_list("post_id").order_by()
-    per_post = per_post.annotate(n=Count("pk"), threads=Count("pk", filter=Q(parent=None)))
-    comment_counts = {post_id: (n, threads) for post_id, n, threads in per_post}
+    # Comments per post, threads per post and replies per thread, in one grouped query.
+    comment_counts, thread_counts, reply_counts = Counter(), Counter(), Counter()
+    per_thread = Comment.objects.visible().filter(post__in=posts).values_list("post_id", "parent_id").order_by()
+    for post_id, parent_id, n in per_thread.annotate(n=Count("pk")):
+        comment_counts[post_id] += n
+        if parent_id is None:
+            thread_counts[post_id] = n
+        else:
+            reply_counts[parent_id] = n
 
     for post in posts:
         post.my_reaction = my_reactions.get(post.pk)
@@ -245,13 +255,14 @@ def decorate(posts, user):
 
         post.comment_list = sorted(post.threads, key=lambda c: (c.created_at, c.pk))  # oldest first
         for comment in post.comment_list:
-            comment.reply_list = list(comment.replies.all())
+            comment.reply_list = sorted(comment.newest_replies, key=lambda c: (c.created_at, c.pk))  # oldest first
+            comment.more_replies = reply_counts[comment.pk] - len(comment.reply_list)
             for shown in (comment, *comment.reply_list):
                 comment_reactions = list(shown.reactions.all())
                 shown.my_reaction = _my_reaction(comment_reactions, user)
                 shown.reaction_total = len(comment_reactions)
-        post.comment_total, threads = comment_counts.get(post.pk, (0, 0))
-        post.earlier_threads = threads - len(post.comment_list)
+        post.comment_total = comment_counts[post.pk]
+        post.earlier_threads = thread_counts[post.pk] - len(post.comment_list)
 
         post.user_can_pin = moderator or post.community_id in managed
         post.is_followed = post.pk in following
@@ -290,8 +301,8 @@ def post_changed(request, post_pk):
     if request.headers.get("X-Fragment"):
         full = request.POST.get("full") == "1"
         # On the post's own page, the card comes back with the threads that page was showing.
-        threads = page_threads(request.META.get("HTTP_REFERER", "")) if full else CARD_THREADS
-        context = {"post": decorate([get_post(request, post_pk, threads)], request.user)[0], "full": full}
+        shown = page_comments(request.META.get("HTTP_REFERER", "")) if full else (CARD_THREADS, CARD_REPLIES)
+        context = {"post": decorate([get_post(request, post_pk, *shown)], request.user)[0], "full": full}
         return render(request, "hub/_post.html", context)
     anchor = f"#post-{post_pk}"
     back = request.META.get("HTTP_REFERER", "").split("#")[0]
@@ -392,7 +403,7 @@ def feed(request):
 
 
 def post_detail(request, pk):
-    post = get_post(request, pk, page_threads(request.get_full_path()))
+    post = get_post(request, pk, *page_comments(request.get_full_path()))
     user = request.user
     if post.kind == Post.NEWS and post.is_live:
         PostRead.objects.get_or_create(post=post, user=user)

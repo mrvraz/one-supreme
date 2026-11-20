@@ -7,6 +7,7 @@ from io import StringIO
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connection
+from django.db.models import Count, Max
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -14,7 +15,7 @@ from django.utils import timezone
 
 from chat.models import Conversation, Message
 from .models import Comment, Community, Event, Post, PostRead, Reaction, Report, User
-from .views import PAGE_THREADS
+from .views import CARD_REPLIES, PAGE_REPLIES, PAGE_THREADS
 
 
 def make_user(name, **extra):
@@ -142,6 +143,49 @@ class QueryCeilingTests(TestCase):
         self.assertEqual(refreshed(f"http://testserver{post.get_absolute_url()}", full=True), PAGE_THREADS)
         self.assertEqual(refreshed(f"http://testserver{post.get_absolute_url()}?comments=all", full=True), PAGE_THREADS + 5)
 
+    def test_a_long_reply_thread_loads_and_draws_only_its_newest_replies(self):
+        post = Post.objects.create(author=self.others[0], body="Big news", pinned_at=timezone.now())
+        start = timezone.now() - timedelta(hours=2)
+        thread = Comment.objects.create(post=post, author=self.others[1], body="First", created_at=start)
+        feed, page, everything = reverse("feed"), post.get_absolute_url(), post.get_absolute_url() + "?comments=all"
+
+        def reply_until(total):
+            done = Comment.objects.filter(parent=thread).count()
+            Comment.objects.bulk_create(
+                Comment(post=post, parent=thread, author=self.others[n % 6], body=f"Reply {n}", created_at=start + timedelta(minutes=n + 1))
+                for n in range(done, total)
+            )
+
+        def shown(url):
+            """(queries, replies the page drew, the thread as the page has it)."""
+            n = self.queries(url)
+            response = self.client.get(url)
+            cards = response.context.get("pinned") or [response.context["post"]]
+            return n, response.content.decode().count('class="comment reply"'), cards[0].comment_list[0]
+
+        reply_until(2)
+        few = {url: shown(url) for url in (feed, page, everything)}
+        reply_until(60)
+        many = {url: shown(url) for url in (feed, page, everything)}
+        for url in (feed, page, everything):
+            self.assertLessEqual(many[url][0], few[url][0], url)
+            self.assertEqual((few[url][1], few[url][2].more_replies), (2, 0), url)
+
+        _n, drawn, card = many[feed]
+        self.assertEqual((drawn, card.more_replies), (CARD_REPLIES, 60 - CARD_REPLIES))
+        self.assertEqual([r.body for r in card.reply_list], ["Reply 57", "Reply 58", "Reply 59"])  # the newest, oldest first
+        self.assertContains(self.client.get(feed), f'href="{page}#comment-{thread.pk}">View 57 more replies<')
+        _n, drawn, on_page = many[page]
+        self.assertEqual((drawn, on_page.more_replies, on_page.reply_list[0].body), (PAGE_REPLIES, 60 - PAGE_REPLIES, "Reply 40"))
+        self.assertContains(self.client.get(page), f'href="?comments=all#comment-{thread.pk}">View 40 more replies<')
+        self.assertEqual(many[everything][1:2], (60,))
+        self.assertNotContains(self.client.get(everything), "more replies")
+
+        # After a reaction on the post's page, the card comes back with the replies that page was showing.
+        response = self.client.post(reverse("react", args=[post.pk]), {"kind": "wow", "full": "1"},
+                                    HTTP_X_FRAGMENT="1", HTTP_REFERER=f"http://testserver{page}")
+        self.assertEqual(response.content.decode().count('class="comment reply"'), PAGE_REPLIES)
+
     def test_news_for_two_of_my_teams_shows_once_and_counts_once(self):
         news = Post.objects.create(author=self.others[0], kind=Post.NEWS, title="For two teams", body="Hello")
         news.audiences.set([self.team, self.site])
@@ -174,5 +218,14 @@ class LoadToolTests(TestCase):
         self.assertIn("| Feed |", table)
         self.assertIn("| Admin: reports |", table)
         self.assertNotIn("HTTP", table)  # every page answered 200
+        self.assertFalse(User.objects.filter(email_digest=True).exists())  # the daily email finds nobody to send to
+        longest = Comment.objects.exclude(parent=None).values("parent").annotate(n=Count("pk")).aggregate(m=Max("n"))["m"]
+        self.assertGreaterEqual(longest, 60)  # a long reply thread, so the benchmark measures one
         with self.assertRaisesMessage(Exception, "only fills an empty one"):
             call_command("seed_load", scale=0.01, force=True, stdout=StringIO())
+
+    def test_seed_load_refuses_a_hub_that_has_staff_but_no_posts_yet(self):
+        make_user("colleague")
+        with self.assertRaisesMessage(Exception, "already has people"):
+            call_command("seed_load", scale=0.01, force=True, stdout=StringIO())
+        self.assertEqual(User.objects.count(), 1)
