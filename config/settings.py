@@ -145,6 +145,15 @@ if OIDC_ENABLED:
     # Shared Microsoft endpoints accept people from any organisation, who can give themselves any email address.
     if re.search(r"/(common|organizations|consumers)/", OIDC_OP_AUTHORIZATION_ENDPOINT + OIDC_OP_TOKEN_ENDPOINT):
         raise ImproperlyConfigured("Use the company's own tenant ID in the sign-in addresses, not common/organizations.")
+    # Tokens name the tenant by its ID, in lower case, on this host. A domain name here would refuse everyone; another
+    # spelling of the host would quietly turn off the tenant check (hub/auth.py) and the leaver check.
+    if re.search(r"microsoftonline|windows\.net", OIDC_OP_TOKEN_ENDPOINT, re.I) and not re.fullmatch(
+        r"https://login\.microsoftonline\.com/[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}/oauth2/v2\.0/token", OIDC_OP_TOKEN_ENDPOINT
+    ):
+        raise ImproperlyConfigured(
+            "OIDC_OP_TOKEN_ENDPOINT must be https://login.microsoftonline.com/<tenant ID>/oauth2/v2.0/token, "
+            "with the directory (tenant) ID from Entra, not a domain name."
+        )
     OIDC_OP_USER_ENDPOINT = env("OIDC_OP_USER_ENDPOINT")
     OIDC_OP_JWKS_ENDPOINT = env("OIDC_OP_JWKS_ENDPOINT")
     OIDC_RP_SIGN_ALGO = "RS256"
@@ -155,8 +164,12 @@ if OIDC_ENABLED:
     MIDDLEWARE.append("mozilla_django_oidc.middleware.SessionRefresh")
     OIDC_RENEW_ID_TOKEN_EXPIRY_SECONDS = 15 * 60
     OIDC_EXEMPT_URLS = [re.compile(r"^/media/"), "manifest", "icon"]
+    # Without a limit, a stalled call to Microsoft holds a gunicorn thread for ever; 16 of them stop the hub.
+    OIDC_TIMEOUT = 10
+    # Sign out also signs the browser out of Microsoft (hub/auth.py), for shared computers.
+    OIDC_OP_LOGOUT_URL_METHOD = "hub.auth.sign_out_url"
 if ALLOW_PASSWORD_LOGIN or not OIDC_ENABLED:
-    AUTHENTICATION_BACKENDS.append("django.contrib.auth.backends.ModelBackend")
+    AUTHENTICATION_BACKENDS.append("hub.auth.PasswordBackend")
 
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "feed"

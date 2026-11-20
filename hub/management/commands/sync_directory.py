@@ -1,7 +1,7 @@
 """Switches off hub accounts for people who've left, using Microsoft Entra ID as the source of truth.
 
 Needs the Entra app registration to have the Microsoft Graph *application* permission User.Read.All,
-with admin consent. Signing in is already blocked for leavers; this also ends every session they still have
+with admin consent. Signing in is already blocked for leavers; this also deletes every session they still have
 (a switched-off account is refused on every request) and takes them out of the directory. The scheduler runs it
 every 15 minutes, quietly, and once a day at 05:00 UTC with an email to the admins if it fails.
 """

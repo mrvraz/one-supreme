@@ -1,6 +1,8 @@
 from datetime import date, timedelta
 
+from django.contrib.auth import SESSION_KEY
 from django.contrib.auth.models import AbstractUser
+from django.contrib.sessions.models import Session
 from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_delete
@@ -110,11 +112,18 @@ class User(AbstractUser):
         return self.get_full_name() or self.email or self.username
 
     def save(self, *args, **kwargs):
+        switching_off = not self.is_active and self.deactivated_at is None
         # Leaver retention counts from the day the account was switched off (see the purge command).
         self.deactivated_at = None if self.is_active else (self.deactivated_at or timezone.now())
         if kwargs.get("update_fields") is not None and "is_active" in kwargs["update_fields"]:
             kwargs["update_fields"] = {*kwargs["update_fields"], "deactivated_at"}
         super().save(*args, **kwargs)
+        if switching_off:
+            # Its sessions go too, so ticking Active again needs a fresh sign-in: a lost laptop's cookie stays dead.
+            # shortcut: reads every live session, fine for a few thousand; store the user on each session beyond that.
+            live = Session.objects.filter(expire_date__gt=timezone.now())
+            mine = [s.pk for s in live.iterator() if s.get_decoded().get(SESSION_KEY) == str(self.pk)]
+            Session.objects.filter(pk__in=mine).delete()
 
     def get_absolute_url(self):
         return reverse("profile", args=[self.pk])

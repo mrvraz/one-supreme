@@ -1,5 +1,5 @@
-from django.contrib.auth import views as auth_views
 from django.urls import path
+from mozilla_django_oidc.views import OIDCLogoutView
 
 from . import account, news, views
 
@@ -7,7 +7,7 @@ urlpatterns = [
     # Shell
     path("", views.feed, name="feed"),
     path("login/", views.LoginView.as_view(), name="login"),
-    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("logout/", OIDCLogoutView.as_view(), name="logout"),  # POST only; also out of Microsoft (hub/auth.py)
     path("manifest.webmanifest", views.manifest, name="manifest"),
     path("icon.svg", views.icon, name="icon"),
     path("sw.js", account.service_worker, name="service_worker"),

@@ -40,7 +40,7 @@ ENTRA = f"https://login.microsoftonline.com/{TENANT}"
 JWKS_URL = f"{ENTRA}/discovery/v2.0/keys"
 OID = "1e6f9a20-0000-4000-8000-000000000001"  # Microsoft's permanent ID for the test person
 EMAIL = "alex.example@supreme.co.uk"
-MODEL_BACKEND = "django.contrib.auth.backends.ModelBackend"
+PASSWORD_BACKEND = "hub.auth.PasswordBackend"
 SSO_ENV = {
     "DEBUG": "1",
     "OIDC_RP_CLIENT_ID": CLIENT_ID,
@@ -114,16 +114,20 @@ class SSOTestCase(TestCase):
         self.assertTrue(response["Location"].startswith(f"{ENTRA}/oauth2/v2.0/authorize?"))
         return query(response)
 
-    def finish_sign_in(self, request, client=None, userinfo=None, key=TENANT_KEY, state=None, **claims):
-        """Microsoft sends the browser back with a code, which the hub swaps for tokens, then reads the userinfo."""
+    def finish_sign_in(self, request, client=None, userinfo=None, key=TENANT_KEY, state=None, broken=None, **claims):
+        """Microsoft sends the browser back with a code, which the hub swaps for tokens, then reads the userinfo.
+        `broken` replaces Microsoft's answers, e.g. {"post": Timeout()} for a token address that doesn't answer."""
         info = {"sub": "pairwise-sub", "email": EMAIL, "given_name": "Alex", "family_name": "Example", **(userinfo or {})}
         token = id_token({"nonce": request.get("nonce"), **claims}, key)
         with mock.patch("mozilla_django_oidc.auth.requests") as requests:
             requests.post.return_value = reply({"id_token": token, "access_token": "access-token", "token_type": "Bearer"})
             requests.get.side_effect = lambda url, **kwargs: reply({"keys": [JWK]} if url == JWKS_URL else info)
+            for call, answer in (broken or {}).items():
+                getattr(requests, call).side_effect = answer
             response = (client or self.client).get(
                 reverse("oidc_authentication_callback"), {"code": "code-from-entra", "state": state or request["state"]}
             )
+        self.calls_to_microsoft = requests.post.call_args_list + requests.get.call_args_list
         self.token_request = requests.post.call_args.kwargs["data"] if requests.post.called else None
         return response
 
@@ -147,9 +151,22 @@ class SignInTests(SSOTestCase):
         self.assertEqual(loaded["AUTHENTICATION_BACKENDS"], ["hub.auth.EmployeeOIDCBackend"])
         self.assertIn("mozilla_django_oidc.middleware.SessionRefresh", loaded["MIDDLEWARE"])
         self.assertIn("hub.auth.session_limit", loaded["MIDDLEWARE"])
+        self.assertEqual(loaded["OIDC_TIMEOUT"], 10)
+        self.assertEqual(loaded["OIDC_OP_LOGOUT_URL_METHOD"], "hub.auth.sign_out_url")
         for shared in ("common", "organizations"):  # these let in people from any organisation
             with self.subTest(shared), self.assertRaisesMessage(ImproperlyConfigured, "own tenant ID"):
                 production_settings(OIDC_OP_AUTHORIZATION_ENDPOINT=f"https://login.microsoftonline.com/{shared}/oauth2/v2.0/authorize")
+        # A token address that would refuse everyone (a domain name) or turn off the tenant and leaver checks.
+        for wrong in (
+            "https://login.microsoftonline.com/supreme.co.uk/oauth2/v2.0/token",
+            f"https://login.windows.net/{TENANT}/oauth2/v2.0/token",
+            f"https://Login.MicrosoftOnline.com/{TENANT}/oauth2/v2.0/token",
+            f"https://login.microsoftonline.com/{TENANT.upper()}/oauth2/v2.0/token",
+            f"https://login.microsoftonline.com/{TENANT}/oauth2/token",
+        ):
+            with self.subTest(wrong), self.assertRaisesMessage(ImproperlyConfigured, "OIDC_OP_TOKEN_ENDPOINT must be"):
+                production_settings(OIDC_OP_TOKEN_ENDPOINT=wrong)
+        production_settings(OIDC_OP_TOKEN_ENDPOINT="https://oauth2.googleapis.com/token")  # other providers are fine
         with self.assertRaisesMessage(ImproperlyConfigured, "ALLOWED_EMAIL_DOMAINS"):
             production_settings(ALLOWED_EMAIL_DOMAINS="")
 
@@ -183,17 +200,30 @@ class SignInTests(SSOTestCase):
         with self.assertLogs("hub.security", "WARNING") as logs:
             self.assert_refused(self.finish_sign_in(self.start_sign_in(), state="made-up-state"))
             self.assert_refused(self.finish_sign_in(self.start_sign_in(), nonce="made-up-nonce"))
+            stranger = Client()  # a browser that never started a sign-in
+            self.assert_refused(self.finish_sign_in(self.start_sign_in(), client=stranger), stranger)
         reasons = [r.details["reason"] for r in logs.records]
-        self.assertIn("state not found", reasons[0])
+        self.assertEqual(reasons[0], "no sign-in started with this state")
         self.assertIn("Nonce verification failed", reasons[1])
-        # A reply in a browser that never started a sign-in, and a finished sign-in replayed.
-        stranger = Client()
+        self.assertEqual(reasons[2], "no sign-in started with this state")
+        self.assertFalse(User.objects.exists())
+
+    def test_a_reply_to_a_sign_in_this_browser_did_not_start_signs_nobody_out(self):
         request = self.start_sign_in()
-        self.assert_refused(self.finish_sign_in(request, client=stranger), stranger)
         self.finish_sign_in(request)
-        with self.assertLogs("hub.security", "WARNING"):
-            self.assert_refused(self.finish_sign_in(request))
-        self.assertEqual(User.objects.count(), 1)
+        alex = self.signed_in_user()
+        callback = reverse("oidc_authentication_callback")
+        replies = {
+            "the finished sign-in replayed": lambda: self.finish_sign_in(request),
+            "a link with a made-up code": lambda: self.client.get(callback, {"code": "a", "state": "b"}),
+            "a link with a made-up error": lambda: self.client.get(callback, {"error": "login_required", "state": "b"}),
+            "a link with no state": lambda: self.client.get(callback, {"error": "login_required"}),
+        }
+        for name, send in replies.items():
+            with self.subTest(name), self.assertLogs("hub.security", "WARNING") as logs:
+                self.assertRedirects(send(), "/login/?error=sso", fetch_redirect_response=False)
+            self.assertEqual([r.details["reason"] for r in logs.records], ["no sign-in started with this state"])
+            self.assertEqual(self.signed_in_user(), alex)  # still signed in
 
     def test_only_a_current_token_from_supremes_tenant_for_this_app_gets_in(self):
         tokens = {
@@ -245,12 +275,37 @@ class SignInTests(SSOTestCase):
         self.assertAlmostEqual(self.client.session["oidc_id_token_expiration"], time.time() + 15 * 60, delta=60)
         # Microsoft refuses (account disabled, sessions revoked): it sends an error back.
         recheck = self.recheck_due()
-        self.client.get(reverse("oidc_authentication_callback"), {"error": "login_required", "state": recheck["state"]})
-        self.assertNotIn(SESSION_KEY, self.client.session)
+        with self.assertLogs("hub.security", "WARNING") as logs:
+            self.assert_refused(self.client.get(reverse("oidc_authentication_callback"), {
+                "error": "login_required", "error_description": "AADSTS50058: no signed-in user", "state": recheck["state"],
+            }))
+        refused = logs.records[0].details
+        self.assertEqual((refused["reason"], refused["error"]), ("refused by Microsoft", "login_required"))
+        self.assertIn("AADSTS50058", refused["description"])
         # Microsoft says yes but the hub's rules now say no, here an email outside the company domains.
         self.sign_in()
         with self.assertLogs("hub.security", "WARNING"):
             self.assert_refused(self.finish_sign_in(self.recheck_due(), userinfo={"email": "alex@new-employer.example"}))
+
+    def test_microsoft_being_slow_or_down_signs_out_instead_of_failing_the_page(self):
+        def userinfo_down(url, **kwargs):
+            if url == JWKS_URL:
+                return reply({"keys": [JWK]})
+            raise real_requests.HTTPError("503 Server Error: Service Unavailable", response=mock.Mock(status_code=503))
+
+        outages = {
+            "token address doesn't answer": {"post": real_requests.Timeout("Read timed out. (read timeout=10)")},
+            "userinfo address down": {"get": userinfo_down},
+        }
+        for name, broken in outages.items():
+            with self.subTest(name):
+                self.sign_in()
+                User.objects.update(policy_version=settings.POLICY_VERSION)
+                with self.assertLogs("hub.security", "WARNING") as logs:
+                    self.assert_refused(self.finish_sign_in(self.recheck_due(), broken=broken))
+                self.assertRegex(logs.records[0].details["reason"], "timed out|503")
+                # Every call to Microsoft gives up after OIDC_TIMEOUT, so a stalled one can't hold a server thread.
+                self.assertTrue(all(call.kwargs["timeout"] == 10 for call in self.calls_to_microsoft))
 
     def recheck_due(self):
         session = self.client.session
@@ -294,6 +349,23 @@ class LeaverTests(SSOTestCase):
                 self.assertTrue(response["Location"].startswith(reverse("login")), response)
         self.assertFalse(Post.objects.exists())
         self.assertEqual(stayers_phone.get(reverse("people")).status_code, 200)
+        self.assertEqual(self.sessions_of(leaver), 0)
+        self.assertEqual(self.sessions_of(stayer), 1)
+
+    def test_switching_an_account_off_deletes_its_sessions(self):
+        alex = User.objects.create_user("alex", EMAIL, sso_id=OID, policy_version=settings.POLICY_VERSION)
+        laptop = self.signed_in_device(alex)  # say it was stolen, cookie and all
+        self.assertEqual(self.sessions_of(alex), 1)
+        alex.is_active = False
+        alex.save()  # what the admin's Active box does
+        self.assertEqual(self.sessions_of(alex), 0)
+        alex.is_active = True  # back on, e.g. a re-hire or a mistake undone
+        alex.save()
+        self.assertTrue(laptop.get(reverse("people"))["Location"].startswith(reverse("login")))
+
+    @staticmethod
+    def sessions_of(user):
+        return sum(s.get_decoded().get(SESSION_KEY) == str(user.pk) for s in Session.objects.all())
 
     def test_the_leaver_check_runs_every_15_minutes_and_emails_failures_from_its_daily_run(self):
         from hub.management.commands import scheduler
@@ -379,6 +451,20 @@ class LeaverTests(SSOTestCase):
         self.assertTrue(alex.is_active)
 
 
+class SignOutTests(SSOTestCase):
+    def test_signing_out_ends_the_session_and_signs_the_browser_out_of_microsoft(self):
+        self.sign_in()
+        key = self.client.session.session_key
+        self.assertEqual(self.client.get(reverse("logout")).status_code, 405)  # a link can't sign anyone out
+        self.assertIn(SESSION_KEY, self.client.session)
+        with self.assertLogs("hub.security", "INFO") as logs:
+            response = self.client.post(reverse("logout"))
+        self.assertRedirects(response, f"{ENTRA}/oauth2/v2.0/logout", fetch_redirect_response=False)
+        self.assertEqual([r.getMessage() for r in logs.records], ["sign_out"])
+        self.assertFalse(Session.objects.filter(session_key=key).exists())
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+
 class SessionTests(TestCase):
     def setUp(self):
         self.alex = User.objects.create_user("alex", EMAIL, policy_version=settings.POLICY_VERSION)
@@ -430,8 +516,8 @@ class PasswordSignInTests(TestCase):
         self.form = {"username": "breakglass", "password": "not-a-real-password"}
 
     def test_password_sign_in_is_off_unless_allow_password_login_is_set(self):
-        self.assertNotIn(MODEL_BACKEND, production_settings()["AUTHENTICATION_BACKENDS"])
-        self.assertIn(MODEL_BACKEND, production_settings(ALLOW_PASSWORD_LOGIN="1")["AUTHENTICATION_BACKENDS"])
+        self.assertNotIn(PASSWORD_BACKEND, production_settings()["AUTHENTICATION_BACKENDS"])
+        self.assertIn(PASSWORD_BACKEND, production_settings(ALLOW_PASSWORD_LOGIN="1")["AUTHENTICATION_BACKENDS"])
         # Without single sign-on the password backend is there, but the sign-in page still refuses.
         with override_settings(ALLOW_PASSWORD_LOGIN=False):
             self.assertNotContains(self.client.get(reverse("login")), 'name="password"')
@@ -446,3 +532,24 @@ class PasswordSignInTests(TestCase):
         self.assertEqual(int(self.client.session[SESSION_KEY]), self.breakglass.pk)
         self.assertEqual(mail.outbox[0].subject, "Staff hub: break-glass sign-in")
         self.assertIn("breakglass@hub.invalid", mail.outbox[0].body)
+        # Its sign-out goes back to the hub's sign-in page: it never signed in to Microsoft.
+        with override_settings(**sign_in_settings(ALLOW_PASSWORD_LOGIN="1")), self.assertLogs("hub.security", "INFO"):
+            self.assertRedirects(self.client.post(reverse("logout")), reverse("login"), fetch_redirect_response=False)
+
+    def test_while_single_sign_on_is_on_only_the_break_glass_account_can_use_a_password(self):
+        # Someone gave these accounts a password. Single sign-on serves them, so a password would skip Entra's MFA.
+        User.objects.create_user("linked", "linked@hub.invalid", "not-a-real-password", sso_id="oid-linked")
+        User.objects.create_user("staff", "staff@supreme.co.uk", "not-a-real-password")  # a company address
+        with override_settings(**sign_in_settings(ALLOW_PASSWORD_LOGIN="1")):
+            for name in ("linked", "staff"):
+                with self.subTest(name), self.assertLogs("hub.security", "WARNING") as logs:
+                    response = self.client.post(reverse("login"), {"username": name, "password": "not-a-real-password"})
+                self.assertEqual(response.status_code, 200)  # the form again, with an error
+                self.assertEqual(logs.records[0].getMessage(), "sign_in_failed")
+                self.assertNotIn(SESSION_KEY, self.client.session)
+            with self.assertLogs("hub.security", "INFO"):
+                self.assertEqual(self.client.post(reverse("login"), self.form).status_code, 302)
+        # Without single sign-on (development and demos) any password account still works.
+        self.client.logout()
+        form = {"username": "staff", "password": "not-a-real-password"}
+        self.assertEqual(self.client.post(reverse("login"), form).status_code, 302)

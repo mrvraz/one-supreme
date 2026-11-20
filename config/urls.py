@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_not_required
 from django.urls import include, path
 from django.views.generic import RedirectView
@@ -26,7 +25,7 @@ urlpatterns = [
         login_not_required(CallbackView.as_view()),
         name="oidc_authentication_callback",
     ),
-    path("oidc/logout/", auth_views.LogoutView.as_view(), name="oidc_logout"),
+    path("oidc/logout/", oidc_views.OIDCLogoutView.as_view(), name="oidc_logout"),
     path("chat/", include("chat.urls")),
     path("library/", include("library.urls")),
     path("journeys/", include("journeys.urls")),

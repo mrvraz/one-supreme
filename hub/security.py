@@ -57,7 +57,7 @@ def record_change(user, obj, message, deletion=False):
 @receiver(user_logged_in)
 def _signed_in(sender, request, user, **kwargs):
     audit("sign_in", request, user)
-    if settings.OIDC_ENABLED and getattr(user, "backend", "") == "django.contrib.auth.backends.ModelBackend":
+    if settings.OIDC_ENABLED and getattr(user, "backend", "") == "hub.auth.PasswordBackend":
         # A password sign-in while single sign-on is on: the break-glass account, which skips Entra's MFA.
         mail_admins(
             "Staff hub: break-glass sign-in",
