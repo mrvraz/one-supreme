@@ -176,6 +176,7 @@ docker run --rm -v staff-hub_media:/data -v "$PWD":/backup alpine tar czf /backu
 - Typed text is escaped before any formatting is added; links must start with `http://` or `https://`.
 - Push subscriptions are only accepted for the known push services, so the server can't be made to send requests elsewhere. Push messages are encrypted end to end; people can hide the text from their lock screen.
 - Translation sends the post's text to `TRANSLATE_URL` only, so point it at a server inside Supreme's network.
+- Admin rights changes, bursts of failed sign-ins and bulk downloads are emailed to `ADMIN_EMAILS` (`docs/operations/SECURITY-ALERTS.md`). `INCIDENT-PLAYBOOKS.md` and `MAINTENANCE.md` sit beside it.
 - Security events go to the `hub.security` log as JSON lines (`docker compose logs app scheduler`); point Supreme's SIEM at them.
 
 ## Before go-live: Supreme's side
